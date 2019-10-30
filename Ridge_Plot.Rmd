@@ -1,0 +1,65 @@
+---
+title: "Ridge Plot"
+output: html_document
+---
+
+```{r echo=TRUE, eval=TRUE, message=FALSE, warning=FALSE}
+packages = c('devtools', 'tidyverse', 'ggridges','readxl','dplyr','plotly')
+
+for (p in packages){
+  if(!require(p, character.only = T)){
+    install.packages(p)
+  }
+  library(p,character.only = T)
+} 
+```
+
+```{r echo=TRUE, eval=TRUE, message=FALSE, warning=FALSE}
+data1 <- read_excel("data/Happiness Index.xlsx", sheet = 1)
+data2 <- read_excel("data/Happiness Index.xlsx", sheet = 2)
+```
+
+```{r echo=TRUE, eval=TRUE, message=FALSE, warning=FALSE}
+ggplot(data1, aes(y=as.factor(Year),
+                      x=`Life Ladder`)) +
+  geom_density_ridges(alpha=0.5) +
+  scale_y_discrete(expand = c(0.01, 0)) +  
+  scale_x_continuous(expand = c(0, 0))+
+  theme(axis.text=element_text(size=10))
+```
+
+```{r echo=TRUE, eval=TRUE, message=FALSE, warning=FALSE}
+data2 <- data2 %>% 
+  rename(c("Explained by: GDP per capita"="GDP",
+           "Explained by: Social support"="SocialSupport",
+           "Explained by: Healthy life expectancy"="LifeExpectancy",
+           "Explained by: Freedom to make life choices"="Freedom",
+           "Explained by: Generosity"="Generosity",
+           "Explained by: Perceptions of corruption"="PerceptionsOfCorruption")) %>%
+  mutate(GDP_Percent = `GDP`/`Happiness score`,
+         SocialSupport_Percent = `SocialSupport`/`Happiness score`,
+         LifeExpectancy_Percent = `LifeExpectancy`/`Happiness score`,
+         Freedom_Percent = `Freedom`/`Happiness score`,
+         Generosity_Percent = `Generosity`/`Happiness score`,
+         PerceptionsOfCorruption_Percent = `PerceptionsOfCorruption`/`Happiness score`) %>%
+  gather( key = "Factor", value = "Value", `GDP`:`PerceptionsOfCorruption`, na.rm = FALSE, convert = FALSE, factor_key = FALSE) %>%
+  gather( key = "PercentFactor", value = "PercentValue", `GDP_Percent`:`PerceptionsOfCorruption_Percent`, na.rm = FALSE, convert = FALSE, factor_key = FALSE) 
+```
+
+```{r echo=TRUE, eval=TRUE, message=FALSE, warning=FALSE}
+ridge_1 <- ggplot(data2, aes(y=1,x=Value,fill=Factor)) +
+  geom_density_ridges(alpha=0.5) +
+  scale_y_discrete(expand = c(0.01, 0)) +  
+  scale_x_continuous(expand = c(0, 0))+
+  theme(axis.text=element_text(size=10))
+
+ridge_1
+```
+
+```{r echo=TRUE, eval=TRUE, message=FALSE, warning=FALSE}
+ggplot(data2, aes(y=1,x=PercentValue,fill=PercentFactor)) +
+  geom_density_ridges(alpha=0.5) +
+  scale_y_discrete(expand = c(0.01, 0)) +  
+  scale_x_continuous(expand = c(0, 0))+
+  theme(axis.text=element_text(size=10))
+```

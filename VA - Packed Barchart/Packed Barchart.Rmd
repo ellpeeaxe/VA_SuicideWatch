@@ -27,7 +27,9 @@ Importing data from csv :
 data <- read_csv("Happiness Index.csv")
 data <- data %>%
   group_by(Country) %>%
-  summarise(LifeLadder = mean(LifeLadder))
+  summarise(LifeLadder = mean(LifeLadder)) %>%
+  mutate(MinMaxLLScale = scale(LifeLadder), MinMaxLL = (LifeLadder-min(LifeLadder)) / (max(LifeLadder)-min(LifeLadder))*100)
+# data <- data %>%((mean(LifeLadder)-min(LifeLadder)) / (max(LifeLadder)-min(LifeLadder)))*100)
 head(data)
 
 ```
@@ -37,12 +39,12 @@ head(data)
 
 plotly_packed_bar(data,
                   label_column    = 'Country',
-                  value_column    = 'LifeLadder',
+                  value_column    = 'MinMaxLL',
                   number_rows     = 10,
                   plot_title      = 'Happiness Index - Average',
                   xaxis_label     = 'LifeLadder',
                   hover_label     = 'LifeLadder',
-                  min_label_width = .025,
+                  min_label_width = 10,
                   color_bar_color ='orange')
 
 ```
