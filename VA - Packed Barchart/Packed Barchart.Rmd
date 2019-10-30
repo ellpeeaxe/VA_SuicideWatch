@@ -1,0 +1,48 @@
+---
+title: "VA Project - Packed Barchart"
+output: html_notebook
+---
+
+Setting up :
+
+```{r echo=TRUE, eval=TRUE, message=FALSE, warning=FALSE}
+packages = c('devtools', 'tidyverse')
+
+for (p in packages){
+  if(!require(p, character.only = T)){
+    install.packages(p)
+  }
+  library(p,character.only = T)
+} 
+
+devtools::install_github("AdamSpannbauer/rPackedBar")
+library('rPackedBar')
+
+```
+
+
+Importing data from csv :
+```{r echo=TRUE, eval=TRUE, message=FALSE, warning=FALSE}
+
+data <- read_csv("Happiness Index.csv")
+data <- data %>%
+  group_by(Country) %>%
+  summarise(LifeLadder = mean(LifeLadder))
+head(data)
+
+```
+
+
+```{r}
+
+plotly_packed_bar(data,
+                  label_column    = 'Country',
+                  value_column    = 'LifeLadder',
+                  number_rows     = 10,
+                  plot_title      = 'Happiness Index - Average',
+                  xaxis_label     = 'LifeLadder',
+                  hover_label     = 'LifeLadder',
+                  min_label_width = .025,
+                  color_bar_color ='orange')
+
+```
