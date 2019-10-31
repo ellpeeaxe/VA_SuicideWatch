@@ -11,98 +11,130 @@ packages = c('devtools', 'tidyverse', 'ggridges','readxl','dplyr',
              'plotly','shiny','shiny.semantic','semantic.dashboard','ggplot2')
 
 for (p in packages){
-    if(!require(p, character.only = T)){
-        install.packages(p)
-    }
-    library(p,character.only = T)
+  if(!require(p, character.only = T)){
+    install.packages(p)
+  }
+  library(p,character.only = T)
 } 
 
 data1 <- read_excel("data/Happiness Index.xlsx", sheet = 1)
 data2 <- read_excel("data/Happiness Index.xlsx", sheet = 2)
 
+data3_geocode <- read.csv('https://raw.githubusercontent.com/plotly/datasets/master/2014_world_gdp_with_codes.csv')
+colnames(data3_geocode)[colnames(data3_geocode)=="COUNTRY"] <- "Country"
+data2 <- merge(data2, data3_geocode[, c("Country","CODE")], by="Country")
+
 # Define UI for application
 ui <- dashboardPage(
-    dashboardHeader(title = "Happiness Watch", inverted = TRUE),
-    dashboardSidebar(
-        sidebarMenu(
-            menuItem(tabName = "overview", "Overview"),
-            menuItem(tabName = "breakdown", "Breakdown")
+  dashboardHeader(title = "Happiness Watch", inverted = TRUE),
+  dashboardSidebar(
+    sidebarMenu(
+      menuItem(tabName = "overview", "Overview"),
+      menuItem(tabName = "breakdown", "Breakdown")
+    )
+  ),
+  dashboardBody(
+    tabItems(
+      selected = 1,
+      tabItem(
+        tabName = "overview",
+        fluidRow(
+          box(width = 16, 
+              title = "Happiness Score Distribution",
+              color = "teal", ribbon = FALSE, title_side = "top", collapsible = FALSE,
+              column(width = 15,
+                     plotlyOutput("choroplethplot")
+              )
+          )
         )
-    ),
-    dashboardBody(
-        tabItems(
-            selected = 1,
-            tabItem(
-                tabName = "overview",
-                fluidRow(
-                    box(width = 15,
-                        title = "Happiness Score Distribution",
-                        color = "teal", ribbon = FALSE, title_side = "top", collapsible = FALSE,
-                        column(width = 15,
-                               plotOutput("ridgeplot1")
-                        )
-                    )
-                ),
-                fluidRow(
-                    box(width = 15,
-                        title = "Happiness Score Distribution",
-                        color = "teal", ribbon = FALSE, title_side = "top", collapsible = FALSE,
-                        column(width = 15,
-                            plotOutput("ridgeplot3")
-                        )
-                    )
-                )
-            ),
-            tabItem(
-                tabName = "breakdown"
-            )
+      ),
+      tabItem(
+        tabName = "breakdown",
+        fluidRow(
+          box(width = 15,
+              title = "Happiness Score Distribution",
+              color = "teal", ribbon = FALSE, title_side = "top", collapsible = FALSE,
+              column(width = 15,
+                     plotOutput("ridgeplot1")
+              )
+          )
+        ),
+        fluidRow(
+          box(width = 15,
+              title = "Happiness Score Distribution",
+              color = "teal", ribbon = FALSE, title_side = "top", collapsible = FALSE,
+              column(width = 15,
+                     plotOutput("ridgeplot3")
+              )
+          )
         )
-    ), theme = "cosmo"
+      )
+    )
+  ), theme = "cosmo"
 )
 
 # Define server logic 
 server <- function(input, output) {
-    
-    data2 <- data2 %>% 
-        rename("GDP"="Explained by: GDP per capita",
-               "SocialSupport"="Explained by: Social support",
-               "LifeExpectancy"="Explained by: Healthy life expectancy",
-               "Freedom"="Explained by: Freedom to make life choices",
-               "Generosity"="Explained by: Generosity",
-               "PerceptionsOfCorruption"="Explained by: Perceptions of corruption") %>%
-        mutate(GDP_Percent = `GDP`/`Happiness score`,
-               SocialSupport_Percent = `SocialSupport`/`Happiness score`,
-               LifeExpectancy_Percent = `LifeExpectancy`/`Happiness score`,
-               Freedom_Percent = `Freedom`/`Happiness score`,
-               Generosity_Percent = `Generosity`/`Happiness score`,
-               PerceptionsOfCorruption_Percent = `PerceptionsOfCorruption`/`Happiness score`) %>%
-        gather( key = "Factor", value = "Value", `GDP`:`PerceptionsOfCorruption`, na.rm = FALSE, convert = FALSE, factor_key = FALSE) %>%
-        gather( key = "PercentFactor", value = "PercentValue", `GDP_Percent`:`PerceptionsOfCorruption_Percent`, na.rm = FALSE, convert = FALSE, factor_key = FALSE) 
-    
-    output$ridgeplot1 <- renderPlot({
-        ggplot(data1, aes(y=as.factor(Year),
-                          x=`Life Ladder`)) +
-            geom_density_ridges(alpha=0.5) +
-            scale_y_discrete(expand = c(0.01, 0)) +  
-            scale_x_continuous(expand = c(0, 0))+
-            theme(axis.text=element_text(size=10))
-    })
-    
-    output$ridgeplot2 <- renderPlot({
-        ggplot(data2, aes(y=1,x=Value,fill=Factor)) +
-            geom_density_ridges(alpha=0.5) +
-            scale_y_discrete(expand = c(0.01, 0)) +  
-            scale_x_continuous(expand = c(0, 0))+
-            theme(axis.text=element_text(size=10))
-    })
-    
-    output$ridgeplot3 <- renderPlot({
-        ggplot(data2, aes(y=1,x=PercentValue,fill=PercentFactor)) +
-            geom_density_ridges(alpha=0.5) +
-            scale_y_discrete(expand = c(0.01, 0)) +  
-            scale_x_continuous(expand = c(0, 0))+
-            theme(axis.text=element_text(size=10))
-    })
+  
+  data2 <- data2 %>% 
+    rename("GDP"="Explained by: GDP per capita",
+           "SocialSupport"="Explained by: Social support",
+           "LifeExpectancy"="Explained by: Healthy life expectancy",
+           "Freedom"="Explained by: Freedom to make life choices",
+           "Generosity"="Explained by: Generosity",
+           "PerceptionsOfCorruption"="Explained by: Perceptions of corruption",
+           "HappinessScore"="Happiness score") %>%
+    mutate(GDP_Percent = `GDP`/`HappinessScore`,
+           SocialSupport_Percent = `SocialSupport`/`HappinessScore`,
+           LifeExpectancy_Percent = `LifeExpectancy`/`HappinessScore`,
+           Freedom_Percent = `Freedom`/`HappinessScore`,
+           Generosity_Percent = `Generosity`/`HappinessScore`,
+           PerceptionsOfCorruption_Percent = `PerceptionsOfCorruption`/`HappinessScore`) %>%
+    gather( key = "Factor", value = "Value", `GDP`:`PerceptionsOfCorruption`, na.rm = FALSE, convert = FALSE, factor_key = FALSE) %>%
+    gather( key = "PercentFactor", value = "PercentValue", `GDP_Percent`:`PerceptionsOfCorruption_Percent`, na.rm = FALSE, convert = FALSE, factor_key = FALSE) 
+  
+  output$ridgeplot1 <- renderPlot({
+    ggplot(data1, aes(y=as.factor(Year),
+                      x=`Life Ladder`)) +
+      geom_density_ridges(alpha=0.5) +
+      scale_y_discrete(expand = c(0.01, 0)) +  
+      scale_x_continuous(expand = c(0, 0))+
+      theme(axis.text=element_text(size=10))
+  })
+  
+  output$ridgeplot2 <- renderPlot({
+    ggplot(data2, aes(y=1,x=Value,fill=Factor)) +
+      geom_density_ridges(alpha=0.5) +
+      scale_y_discrete(expand = c(0.01, 0)) +  
+      scale_x_continuous(expand = c(0, 0))+
+      theme(axis.text=element_text(size=10))
+  })
+  
+  output$ridgeplot3 <- renderPlot({
+    ggplot(data2, aes(y=1,x=PercentValue,fill=PercentFactor)) +
+      geom_density_ridges(alpha=0.5) +
+      scale_y_discrete(expand = c(0.01, 0)) +  
+      scale_x_continuous(expand = c(0, 0))+
+      theme(axis.text=element_text(size=10))
+  })
+  
+  # light grey boundaries
+  l <- list(color = toRGB("grey"), width = 0.5)
+  geo <- list(
+    showframe = FALSE,
+    showcoastlines = FALSE,
+    projection = list(type = 'Mercator')
+  )
+  output$choroplethplot <- renderPlotly({
+    plot_geo(data2) %>%
+      add_trace(
+        z = ~HappinessScore, color = ~HappinessScore, colors = 'Blues',
+        text = ~Country, locations = ~CODE, marker = list(line = l)
+      ) %>%
+      colorbar(title = 'Happiness Score') %>%
+      layout(
+        geo = geo)
+  })
 }
 
 # Run the application 
