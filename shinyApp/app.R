@@ -39,11 +39,22 @@ ui <- dashboardPage(
       tabItem(
         tabName = "overview",
         fluidRow(
-          box(width = 16, 
-              title = "Happiness Score Distribution",
+          box(width = 6,
+            title = "World Happiness Index 2019 Bar Chart (Descending Order)",
+            color = "teal", ribbon = FALSE, title_side = "top", collapsible = FALSE,
+            column(width= 5,
+                   div(style="max-height:500px; overflow-y: scroll",
+                       color = "teal", ribbon = FALSE, title_side = "top", collapsible = FALSE,
+                         plotlyOutput("barchart")
+                   )
+            )
+          ),
+          box(width = 10,
+              title = "World Happiness Index 2019 Choropleth Plot",
               color = "teal", ribbon = FALSE, title_side = "top", collapsible = FALSE,
-              column(width = 15,
+              column(width = 10,
                      plotlyOutput("choroplethplot")
+                     
               )
           )
         )
@@ -73,6 +84,7 @@ ui <- dashboardPage(
   ), theme = "cosmo"
 )
 
+
 # Define server logic 
 server <- function(input, output) {
   
@@ -91,7 +103,9 @@ server <- function(input, output) {
            Generosity_Percent = `Generosity`/`HappinessScore`,
            PerceptionsOfCorruption_Percent = `PerceptionsOfCorruption`/`HappinessScore`) %>%
     gather( key = "Factor", value = "Value", `GDP`:`PerceptionsOfCorruption`, na.rm = FALSE, convert = FALSE, factor_key = FALSE) %>%
-    gather( key = "PercentFactor", value = "PercentValue", `GDP_Percent`:`PerceptionsOfCorruption_Percent`, na.rm = FALSE, convert = FALSE, factor_key = FALSE) 
+    gather( key = "PercentFactor", value = "PercentValue", `GDP_Percent`:`PerceptionsOfCorruption_Percent`, na.rm = FALSE, convert = FALSE, factor_key = FALSE)
+  
+  data2_sorted <- data2[order(data2$"HappinessScore"),]
   
   output$ridgeplot1 <- renderPlot({
     ggplot(data1, aes(y=as.factor(Year),
@@ -118,13 +132,24 @@ server <- function(input, output) {
       theme(axis.text=element_text(size=10))
   })
   
-  # light grey boundaries
+  #World Bar Chart
+  output$barchart <-renderPlotly({
+    plot_ly(data2_sorted, y=~Country, x=~HappinessScore, type = 'bar', orientation = 'h', height = 3000) %>%
+      layout(
+        yaxis = list(title = "",
+                     categoryorder = "array",
+                     categoryarray = ~HappinessScore)
+      )
+  }) 
+  
+  # World Choropleth Chart
   l <- list(color = toRGB("grey"), width = 0.5)
   geo <- list(
     showframe = FALSE,
     showcoastlines = FALSE,
     projection = list(type = 'Mercator')
   )
+
   output$choroplethplot <- renderPlotly({
     plot_geo(data2) %>%
       add_trace(
@@ -135,6 +160,7 @@ server <- function(input, output) {
       layout(
         geo = geo)
   })
+
 }
 
 # Run the application 
