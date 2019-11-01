@@ -39,7 +39,6 @@ ui <- dashboardPage(
       tabItem(
         tabName = "overview",
         fluidRow(
-<<<<<<< HEAD
           box(width = 6,
             title = "World Happiness Index 2019 Bar Chart (Descending Order)",
             color = "teal", ribbon = FALSE, title_side = "top", collapsible = FALSE,
@@ -52,11 +51,9 @@ ui <- dashboardPage(
           ),
           box(width = 10,
               title = "World Happiness Index 2019 Choropleth Plot",
-          box(width = 15, 
               color = "teal", ribbon = FALSE, title_side = "top", collapsible = FALSE,
               column(width = 10,
                      plotlyOutput("choroplethplot")
-                     
               )
           )
         )
@@ -68,6 +65,13 @@ ui <- dashboardPage(
               title = "Happiness Score Distribution",
               color = "teal", ribbon = FALSE, title_side = "top", collapsible = FALSE,
               column(width = 15,
+                     selectInput("ridge1years", "Years",
+                                 width = "100%",
+                                 choices = levels(as.factor(data1$Year)),
+                                 multiple = TRUE,
+                                 selected = levels(as.factor(data1$Year)))
+              ),
+              column(width = 15,
                      plotOutput("ridgeplot1")
               )
           )
@@ -76,8 +80,28 @@ ui <- dashboardPage(
           box(width = 15,
               title = "Happiness Score Distribution",
               color = "teal", ribbon = FALSE, title_side = "top", collapsible = FALSE,
+              column(
+                  width = 15,
+                  radioButtons(
+                      inputId = "ridge23toggle", 
+                      label = "View as:",
+                      c("Percentile" = "percentile",
+                        "Value" = "value"),
+                      selected = "percentile",
+                      inline = TRUE
+                  )
+              ),
               column(width = 15,
-                     plotOutput("ridgeplot3")
+                     conditionalPanel(
+                         condition = "input.ridge23toggle == 'value'",
+                         plotOutput("ridgeplot2")
+                     )
+              ),
+              column(width = 15,
+                     conditionalPanel(
+                         condition = "input.ridge23toggle == 'percentile'",
+                        plotOutput("ridgeplot3")
+                     )
               )
           )
         )
@@ -110,7 +134,9 @@ server <- function(input, output) {
   data2_sorted <- data2[order(data2$"HappinessScore"),]
   
   output$ridgeplot1 <- renderPlot({
-    ggplot(data1, aes(y=as.factor(Year),
+    filtered_data <- subset(data1,
+                Year %in% input$ridge1years)
+    ggplot(filtered_data, aes(y=as.factor(Year),
                       x=`Life Ladder`)) +
       geom_density_ridges(alpha=0.5) +
       scale_y_discrete(expand = c(0.01, 0)) +  
@@ -123,7 +149,7 @@ server <- function(input, output) {
       geom_density_ridges(alpha=0.5) +
       scale_y_discrete(expand = c(0.01, 0)) +  
       scale_x_continuous(expand = c(0, 0))+
-      theme(axis.text=element_text(size=10))
+      theme(axis.text=element_text(size=10), legend.position = "bottom")
   })
   
   output$ridgeplot3 <- renderPlot({
@@ -131,7 +157,7 @@ server <- function(input, output) {
       geom_density_ridges(alpha=0.5) +
       scale_y_discrete(expand = c(0.01, 0)) +  
       scale_x_continuous(expand = c(0, 0))+
-      theme(axis.text=element_text(size=10))
+      theme(axis.text=element_text(size=10), legend.position = "bottom")
   })
   
   #World Bar Chart
