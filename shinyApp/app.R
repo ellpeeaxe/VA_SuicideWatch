@@ -39,6 +39,7 @@ ui <- dashboardPage(
       tabItem(
         tabName = "overview",
         fluidRow(
+<<<<<<< HEAD
           box(width = 6,
             title = "World Happiness Index 2019 Bar Chart (Descending Order)",
             color = "teal", ribbon = FALSE, title_side = "top", collapsible = FALSE,
@@ -51,6 +52,7 @@ ui <- dashboardPage(
           ),
           box(width = 10,
               title = "World Happiness Index 2019 Choropleth Plot",
+          box(width = 15, 
               color = "teal", ribbon = FALSE, title_side = "top", collapsible = FALSE,
               column(width = 10,
                      plotlyOutput("choroplethplot")
