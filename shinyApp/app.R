@@ -8,7 +8,7 @@
 #
 
 packages = c('devtools', 'tidyverse', 'ggridges','readxl','dplyr',
-             'plotly','shiny','shiny.semantic','semantic.dashboard','ggplot2', 'DT', 'scales')
+             'plotly','shiny','shiny.semantic','semantic.dashboard','ggplot2', 'DT', 'scales', 'rgdal')
 
 for (p in packages){
   if(!require(p, character.only = T)){
@@ -42,8 +42,8 @@ ui <- dashboardPage(
           box(width = 7,
             title = "World Happiness Index 2019 Bar Chart (Descending Order)",
             color = "teal", ribbon = FALSE, title_side = "top", collapsible = FALSE,
-            column(width= 5,
-                   div(style="max-height:500px; overflow-y: scroll",
+            column(width= 5, 
+                   div(style="height:300px; overflow-y: scroll",
                        color = "teal", ribbon = FALSE, title_side = "top", collapsible = FALSE,
                          plotlyOutput("barchart")
                    )
@@ -53,33 +53,38 @@ ui <- dashboardPage(
               title = "World Happiness Index 2019 Choropleth Plot",
               color = "teal", ribbon = FALSE, title_side = "top", collapsible = FALSE,
               column(width = 10,
-                     plotlyOutput("choroplethplot")
+                     div(style="height:300px",
+                         plotlyOutput("choroplethplot")
+                    )
               )
           )
         ),
         fluidRow(
           box(width = 7,
+              style="height:450px",
               title = "World Happiness Index Scatter Plot",
               color = "teal", ribbon = FALSE, title_side = "top", collapsible = FALSE,
               fluidRow(
-                column(width = 5,
-                  selectInput(inputId = "start_year", label = "From:",
-                              choices = c(2005:2018),
-                              selected = 2005
-                  )
+                div(style="display: inline-block;vertical-align:top; width: 150px;",
+                       selectInput(inputId = "start_year", label = "From:",
+                                   choices = c(2005:2018),
+                                   selected = 2005
+                       )
                 ),
-                column(width = 2,
-                  selectInput(inputId = "end_year", label = "To:",
-                              choices = c(2005:2018),
-                              selected = 2018
-                  )
+                div(style="display: inline-block;vertical-align:top; width: 150px;",
+                       selectInput(inputId = "end_year", label = "To:",
+                                   choices = c(2005:2018),
+                                   selected = 2018
+                       )
                 )
               ),
               column(width = 5,
                      plotlyOutput("scatterplot")
               )
+              
           ),
           box(width = 9,
+              style="height:450px",
               title = "Happiness Score Distribution",
               color = "teal", ribbon = FALSE, title_side = "top", collapsible = FALSE,
               column(
@@ -194,7 +199,7 @@ server <- function(input, output) {
                      categoryorder = "array",
                      categoryarray = ~HappinessScore)
       )
-  }) 
+  })
   
   # World Choropleth Chart
   l <- list(color = toRGB("grey"), width = 0.5)
@@ -210,9 +215,10 @@ server <- function(input, output) {
         z = ~HappinessScore, color = ~HappinessScore, colors = 'Blues',
         text = ~Country, locations = ~CODE, marker = list(line = l)
       ) %>%
-      colorbar(title = 'Happiness Score') %>%
+      colorbar(title = 'Happiness') %>%
       layout(
-        geo = geo)
+        geo = geo, paper_bgcolor='transparent')
+    
   })
   
   
@@ -234,7 +240,7 @@ server <- function(input, output) {
     plot_ly(scatterplot_data(), name=~country, x = ~year1, y = ~year2, 
             type = 'scatter', mode = 'markers', text = ~paste("Change: ", change),
             color= ~change, colors = c('red','green'))%>%
-      layout(xaxis = list(title = input$start_year), yaxis = list(title = input$end_year), showlegend = FALSE) 
+      layout(xaxis = list(title = input$start_year), yaxis = list(title = input$end_year), showlegend = FALSE,geo = geo, paper_bgcolor='transparent') 
   })
   
   # Comparison Tab - Country A
