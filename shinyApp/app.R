@@ -3,12 +3,12 @@
 # the 'Run App' button above.
 #
 # Find out more about building applications with Shiny here:
-#
+#==
 #    http://shiny.rstudio.com/
 #
 
 packages = c('devtools', 'tidyverse', 'ggridges','readxl','dplyr',
-             'plotly','shiny','shiny.semantic','semantic.dashboard','ggplot2')
+             'plotly','shiny','shiny.semantic','semantic.dashboard','ggplot2', 'DT', 'scales')
 
 for (p in packages){
   if(!require(p, character.only = T)){
@@ -30,7 +30,7 @@ ui <- dashboardPage(
   dashboardSidebar(
     sidebarMenu(
       menuItem(tabName = "overview", "Overview"),
-      menuItem(tabName = "breakdown", "Breakdown")
+      menuItem(tabName = "comparison", "Country Comparison")
     )
   ),
   dashboardBody(
@@ -39,7 +39,7 @@ ui <- dashboardPage(
       tabItem(
         tabName = "overview",
         fluidRow(
-          box(width = 6,
+          box(width = 7,
             title = "World Happiness Index 2019 Bar Chart (Descending Order)",
             color = "teal", ribbon = FALSE, title_side = "top", collapsible = FALSE,
             column(width= 5,
@@ -49,60 +49,86 @@ ui <- dashboardPage(
                    )
             )
           ),
-          box(width = 10,
+          box(width = 9,
               title = "World Happiness Index 2019 Choropleth Plot",
               color = "teal", ribbon = FALSE, title_side = "top", collapsible = FALSE,
               column(width = 10,
                      plotlyOutput("choroplethplot")
               )
           )
-        )
-      ),
-      tabItem(
-        tabName = "breakdown",
-        fluidRow(
-          box(width = 15,
-              title = "Happiness Score Distribution",
-              color = "teal", ribbon = FALSE, title_side = "top", collapsible = FALSE,
-              column(width = 15,
-                     selectInput("ridge1years", "Years",
-                                 width = "100%",
-                                 choices = levels(as.factor(data1$Year)),
-                                 multiple = TRUE,
-                                 selected = levels(as.factor(data1$Year)))
-              ),
-              column(width = 15,
-                     plotOutput("ridgeplot1")
-              )
-          )
         ),
         fluidRow(
-          box(width = 15,
+          box(width = 7,
+              title = "World Happiness Index Scatter Plot",
+              color = "teal", ribbon = FALSE, title_side = "top", collapsible = FALSE,
+              fluidRow(
+                column(width = 5,
+                  selectInput(inputId = "start_year", label = "From:",
+                              choices = c(2005:2018),
+                              selected = 2005
+                  )
+                ),
+                column(width = 2,
+                  selectInput(inputId = "end_year", label = "To:",
+                              choices = c(2005:2018),
+                              selected = 2018
+                  )
+                )
+              ),
+              column(width = 5,
+                     plotlyOutput("scatterplot")
+              )
+          ),
+          box(width = 9,
               title = "Happiness Score Distribution",
               color = "teal", ribbon = FALSE, title_side = "top", collapsible = FALSE,
               column(
-                  width = 15,
-                  radioButtons(
-                      inputId = "ridge23toggle", 
-                      label = "View as:",
-                      c("Percentile" = "percentile",
-                        "Value" = "value"),
-                      selected = "percentile",
-                      inline = TRUE
-                  )
+                width = 9,
+                radioButtons(
+                  inputId = "ridge23toggle", 
+                  label = "View as:",
+                  c("Percentile" = "percentile",
+                    "Value" = "value"),
+                  selected = "percentile",
+                  inline = TRUE
+                )
               ),
-              column(width = 15,
+              column(width = 9,
                      conditionalPanel(
-                         condition = "input.ridge23toggle == 'value'",
-                         plotOutput("ridgeplot2")
+                       condition = "input.ridge23toggle == 'value'",
+                       plotOutput("ridgeplot2")
                      )
               ),
-              column(width = 15,
+              column(width = 9,
                      conditionalPanel(
-                         condition = "input.ridge23toggle == 'percentile'",
-                        plotOutput("ridgeplot3")
+                       condition = "input.ridge23toggle == 'percentile'",
+                       plotOutput("ridgeplot3")
                      )
               )
+          )
+        )
+      ),
+      tabItem(
+        tabName = "comparison",
+        fluidRow(
+          selectInput(inputId = "comparison_year", label = "Select year:", 
+                      choices = c(2005:2018), selected = 2018)
+        ),
+        fluidRow(
+          #First Country 
+          box(width = 7,
+              title = "Country A",
+              color = "teal", ribbon = FALSE, title_side = "top", collapsible = FALSE,
+              selectInput(inputId = "first_country", label = "Select country:", 
+                         choices = levels(as.factor(data2$Country)), selected = "Afghanistan"),
+              plotlyOutput("countryA_barchart")
+          ),
+          box(width = 7,
+              title = "Country B",
+              color = "teal", ribbon = FALSE, title_side = "top", collapsible = FALSE,
+              selectInput(inputId = "second_country", label = "Select country:",
+                          choices = levels(as.factor(data2$Country)), selected = "Afghanistan"),
+              plotlyOutput("countryB_barchart")
           )
         )
       )
@@ -188,7 +214,69 @@ server <- function(input, output) {
       layout(
         geo = geo)
   })
+  
+  
+  # Scatter Plot Chart 
+  scatterplot_data <- reactive({
+    scatterplot_data <- data1 %>%
+      select("Country name", Year, "Life Ladder") %>%
+      spread(Year, "Life Ladder") %>% 
+      drop_na(input$start_year, input$end_year) %>% 
+      rename("country"="Country name",
+             "year1"=paste(input$start_year),
+             "year2"=paste(input$end_year)) %>%
+      select(country,year1,year2) %>%
+      mutate(change = percent(round((year2 - year1)/year1, digits = 2)))
+  })
 
+  
+  output$scatterplot <- renderPlotly({
+    plot_ly(scatterplot_data(), name=~country, x = ~year1, y = ~year2, 
+            type = 'scatter', mode = 'markers', text = ~paste("Change: ", change),
+            color= ~change, colors = c('red','green'))%>%
+      layout(xaxis = list(title = input$start_year), yaxis = list(title = input$end_year), showlegend = FALSE) 
+  })
+  
+  # Comparison Tab - Country A
+  countryA_data <- reactive({
+    countryA_data <- data1 %>% 
+      rename("Country" = "Country name",
+           "HappinessIndex" = "Life Ladder",
+           "GDP" = "Log GDP per capita",
+           "SocialSupport" = "Social support",
+           "LifeExpectancy" = "Healthy life expectancy at birth",
+           "Freedom" = "Freedom to make life choices",
+           "Corruption" = "Perceptions of corruption") %>%
+    select(Country, Year, HappinessIndex, GDP, SocialSupport, 
+           LifeExpectancy, Freedom, Corruption) %>% 
+    filter(Country == input$first_country & Year == input$comparison_year) %>% 
+    gather(Category, Value, HappinessIndex, GDP, SocialSupport, LifeExpectancy, Freedom, Corruption)
+  })
+  
+  output$countryA_barchart <- renderPlotly({
+    plot_ly(countryA_data(), x = ~Category, y = ~Value, type = "bar") 
+  })
+  
+  
+  # Comparison Tab - Country B
+  countryB_data <- reactive({
+    countryB_data <- data1 %>% 
+      rename("Country" = "Country name",
+             "HappinessIndex" = "Life Ladder",
+             "GDP" = "Log GDP per capita",
+             "SocialSupport" = "Social support",
+             "LifeExpectancy" = "Healthy life expectancy at birth",
+             "Freedom" = "Freedom to make life choices",
+             "Corruption" = "Perceptions of corruption") %>%
+      select(Country, Year, HappinessIndex, GDP, SocialSupport, 
+             LifeExpectancy, Freedom, Corruption) %>% 
+      filter(Country == input$second_country & Year == input$comparison_year) %>% 
+      gather(Category, Value, HappinessIndex, GDP, SocialSupport, LifeExpectancy, Freedom, Corruption)
+  })
+  
+  output$countryB_barchart <- renderPlotly({
+    plot_ly(countryB_data(), x = ~Category, y = ~Value, type = "bar") 
+  })
 }
 
 # Run the application 
