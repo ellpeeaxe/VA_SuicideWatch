@@ -31,7 +31,8 @@ ui <- dashboardPage(
     sidebarMenu(
       menuItem(tabName = "overview", "Overview"),
       menuItem(tabName = "comparison", "Country Comparison"),
-      menuItem(tabName = "comparison2", "Country Comparison 2")
+      menuItem(tabName = "comparison2", "Country Comparison 2"),
+      menuItem(tabName = "country", "Country Time-Series Dashboard")
     )
   ),
   dashboardBody(
@@ -162,6 +163,27 @@ ui <- dashboardPage(
                           choices = levels(as.factor(data2$Country)), selected = "Afghanistan"),
               plotlyOutput("countryB_radar")
           )
+        )
+      ),
+      tabItem(
+        tabName = "country",
+        fluidRow(
+          selectInput(inputId = "country_tab_selected", label = "Select country:",
+                      choices = levels(as.factor(data2$Country)), selected = "Afghanistan")
+        ),
+        fluidRow(
+          box(width = 16,
+              style="height:210px",
+              title = "Happiness Index 2005 - 2018",
+              color = "teal", ribbon = FALSE, title_side = "top", Collapsible = FALSE,
+              plotlyOutput("happiness_timeseries"))
+        ),
+        fluidRow(
+          box(width = 16,
+              style="height:340px",
+              title = "Well-being Measures 2005 - 2018",
+              color = "teal", ribbon = FALSE, title_side = "top", Collapsible = FALSE,
+              plotlyOutput("measures_timeseries"))
         )
       )
     )
@@ -398,7 +420,43 @@ server <- function(input, output) {
         showlegend = F
       ) 
   })
+  
+  #Country Tab
+  country_data_selected <- reactive({
+    data1 %>%
+        rename("Country" = "Country name",
+               "HappinessIndex" = "Life Ladder") %>%
+      select(Country, Year, HappinessIndex) %>% 
+      filter(Country == input$country_tab_selected)
+  })
+  
+  country_data_selected_measurements <- reactive({
+    comparison_data %>%
+      select(Country, Year, HappinessIndex, MinMaxSS, MinMaxLE, MinMaxFreedom, MinMaxCorruption, MinMaxGenerosity, MinMaxGDP) %>% 
+      filter(Country == input$country_tab_selected)
+  })
+  
+  output$happiness_timeseries <- renderPlotly({
+    plot_ly(country_data_selected(), x = ~Year, y = ~HappinessIndex, mode = 'lines+markers') %>%
+      layout(
+        height = 200,
+        yaxis = list(title = "Happiness Index"
+      ))
+  })
+  
+  output$measures_timeseries <- renderPlotly({
+    plot_ly(country_data_selected_measurements(), x = ~Year, y = ~MinMaxGDP, mode = 'lines+markers', name = "GDP") %>%
+      add_trace(y = ~MinMaxSS, name = "Social Support", mode = 'lines+markers')%>%
+      add_trace(y = ~MinMaxLE, name = "Life Expectancy", mode = 'lines+markers')%>%
+      add_trace(y = ~MinMaxFreedom, name = "Freedom to Make Life Choices", mode = 'lines+markers')%>%
+      add_trace(y = ~MinMaxCorruption, name = "Perceptions of Corruptions", mode = 'lines+markers')%>%
+      add_trace(y = ~MinMaxGenerosity, name = "Generosity", mode = 'lines+markers') %>%
+      layout(
+        height = 350,
+        yaxis = list(title = "Normalized Value"
+        ))
+  })
+    
 }
-
 # Run the application 
 shinyApp(ui = ui, server = server)
