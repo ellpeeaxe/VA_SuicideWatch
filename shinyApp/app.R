@@ -44,7 +44,7 @@ ui <- dashboardPage(
           box(width = 7,
             title = "World Happiness Index 2019 Bar Chart (Descending Order)",
             color = "teal", ribbon = FALSE, title_side = "top", collapsible = FALSE,
-            column(width= 5, 
+            column(width= 7, 
                    div(style="height:300px; overflow-y: scroll",
                        color = "teal", ribbon = FALSE, title_side = "top", collapsible = FALSE,
                          plotlyOutput("barchart")
@@ -194,7 +194,7 @@ ui <- dashboardPage(
 # Define server logic 
 server <- function(input, output) {
   
-  data2 <- data2 %>% 
+  RidgePlot_and_Chloro <- data2 %>% 
     rename("GDP"="Explained by: GDP per capita",
            "SocialSupport"="Explained by: Social support",
            "LifeExpectancy"="Explained by: Healthy life expectancy",
@@ -211,7 +211,7 @@ server <- function(input, output) {
     gather( key = "Factor", value = "Value", `GDP`:`PerceptionsOfCorruption`, na.rm = FALSE, convert = FALSE, factor_key = FALSE) %>%
     gather( key = "PercentFactor", value = "PercentValue", `GDP_Percent`:`PerceptionsOfCorruption_Percent`, na.rm = FALSE, convert = FALSE, factor_key = FALSE)
   
-  data2_sorted <- data2[order(data2$"HappinessScore"),]
+  data2_sorted <- RidgePlot_and_Chloro[order(RidgePlot_and_Chloro$"HappinessScore"),]
   
   output$ridgeplot1 <- renderPlot({
     filtered_data <- subset(data1,
@@ -225,29 +225,81 @@ server <- function(input, output) {
   })
   
   output$ridgeplot2 <- renderPlot({
-    ggplot(data2, aes(y=1,x=Value,fill=Factor)) +
+    ggplot(RidgePlot_and_Chloro, aes(y=1,x=Value,fill=Factor)) +
       geom_density_ridges(alpha=0.5) +
+      
       scale_y_discrete(expand = c(0.01, 0)) +  
       scale_x_continuous(expand = c(0, 0))+
       theme(axis.text=element_text(size=10), legend.position = "bottom")
   })
   
   output$ridgeplot3 <- renderPlot({
-    ggplot(data2, aes(y=1,x=PercentValue,fill=PercentFactor)) +
+    ggplot(RidgePlot_and_Chloro, aes(y=1,x=PercentValue,fill=PercentFactor)) +
       geom_density_ridges(alpha=0.5) +
       scale_y_discrete(expand = c(0.01, 0)) +  
       scale_x_continuous(expand = c(0, 0))+
       theme(axis.text=element_text(size=10), legend.position = "bottom")
   })
   
-  #World Bar Chart
+  #World Stacked Bar Chart
+  stackedBC_data <- data2 %>% 
+    rename("GDP"="Explained by: GDP per capita",
+           "SocialSupport"="Explained by: Social support",
+           "LifeExpectancy"="Explained by: Healthy life expectancy",
+           "Freedom"="Explained by: Freedom to make life choices",
+           "Generosity"="Explained by: Generosity",
+           "PerceptionsOfCorruption"="Explained by: Perceptions of corruption",
+           "Dystopia"="Dystopia (1.88) + residual",
+           "HappinessScore"="Happiness score") %>%
+    select(Country, HappinessScore, GDP, SocialSupport, LifeExpectancy,
+           Freedom, Generosity, PerceptionsOfCorruption, Dystopia)
+  
+  #Storing datatable's headers as list
+  headers <- (colnames(stackedBC_data))
+  
+  #Function (Testing for user's input)
+  temp <- headers[3] #replacing this index 
+  headers[3] <- headers[grep("Freedom", headers)]
+  headers[6] <- temp
+  
+  sorted_data <- stackedBC_data[order(stackedBC_data[["Freedom"]]),] 
+  
   output$barchart <-renderPlotly({
-    plot_ly(data2_sorted, y=~Country, x=~HappinessScore, type = 'bar', orientation = 'h', height = 3000) %>%
-      layout(
-        yaxis = list(title = "",
-                     categoryorder = "array",
-                     categoryarray = ~HappinessScore)
-      )
+    #Plotting Stacked bar chart
+    p <- plot_ly(sorted_data, type='bar', height = 600, width=600)
+    
+    for(col in headers) {
+      if(col == "GDP"){
+        p <- add_trace(p,x = ~GDP, y=~Country,  name = 'GDP') 
+      }else if(col == "SocialSupport"){
+        p <- add_trace(p,x = ~SocialSupport,
+                       y=~Country, type='bar', name = 'Social Support')
+      }else if(col == "LifeExpectancy"){
+        p <- add_trace(p,x = ~LifeExpectancy, 
+                       y=~Country, type='bar', name = 'Life Expectancy')
+      }else if(col == "Freedom"){
+        p <- add_trace(p,x = ~Freedom, 
+                       y=~Country, type='bar', name = 'Freedom')
+      }else if(col == "Generosity"){
+        p <- add_trace(p,x = ~Generosity, 
+                       y=~Country, type='bar', name = 'Generosity')
+      }else if(col == "PerceptionsOfCorruption"){
+        p <- add_trace(p,x = ~PerceptionsOfCorruption, 
+                       y=~Country, name = 'PerceptionsOfCorruption')
+      }else if(col == "Dystopia"){
+        p <- add_trace(p,x = ~Dystopia, 
+                       y=~Country, name = 'Dystopia')
+      }
+    }
+    
+    p <-layout(p,
+               yaxis = list(
+                 categoryorder = "array",
+                 categoryarray = ~Country
+               ),
+               barmode="stack"
+    )
+    p
   })
   
   # World Choropleth Chart
@@ -259,7 +311,7 @@ server <- function(input, output) {
   )
 
   output$choroplethplot <- renderPlotly({
-    plot_geo(data2) %>%
+    plot_geo(RidgePlot_and_Chloro) %>%
       add_trace(
         z = ~HappinessScore, color = ~HappinessScore, colors = 'Blues',
         text = ~Country, locations = ~CODE, marker = list(line = l)
@@ -281,15 +333,15 @@ server <- function(input, output) {
              "year1"=paste(input$start_year),
              "year2"=paste(input$end_year)) %>%
       select(country,year1,year2) %>%
-      mutate(change = percent(round((year2 - year1)/year1, digits = 2)))
+      mutate(change = round((year2 - year1)/year1, digits = 2))
   })
 
   
   output$scatterplot <- renderPlotly({
-    plot_ly(scatterplot_data(), name=~country, x = ~year1, y = ~year2, 
-            type = 'scatter', mode = 'markers', text = ~paste("Change: ", change),
+    plot_ly(scatterplot_data(), name=~country, x = ~year2, y = ~year1, 
+            type = 'scatter', mode = 'markers', text = ~paste("Country :", country, "<br>Change: ", change),
             color= ~change, colors = c('red','green'))%>%
-      layout(xaxis = list(title = input$start_year), yaxis = list(title = input$end_year), showlegend = FALSE,geo = geo, paper_bgcolor='transparent') 
+      layout(xaxis = list(title = input$end_year), yaxis = list(title = input$start_year), showlegend = FALSE,geo = geo, paper_bgcolor='transparent') 
   })
   
   # MinMax Scaler
@@ -446,6 +498,7 @@ server <- function(input, output) {
   
   output$measures_timeseries <- renderPlotly({
     plot_ly(country_data_selected_measurements(), x = ~Year, y = ~MinMaxGDP, mode = 'lines+markers', name = "GDP") %>%
+      add_trace(y = ~MinMaxGDP, name = "GDP", mode = 'lines+markers')%>%
       add_trace(y = ~MinMaxSS, name = "Social Support", mode = 'lines+markers')%>%
       add_trace(y = ~MinMaxLE, name = "Life Expectancy", mode = 'lines+markers')%>%
       add_trace(y = ~MinMaxFreedom, name = "Freedom to Make Life Choices", mode = 'lines+markers')%>%

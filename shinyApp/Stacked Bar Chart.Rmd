@@ -1,0 +1,96 @@
+Load Data
+```{r}
+data2 <- read_excel("data/Happiness Index.xlsx", sheet = 2)
+
+stackedBC_data <- data2 %>% 
+  rename("GDP"="Explained by: GDP per capita",
+         "SocialSupport"="Explained by: Social support",
+         "LifeExpectancy"="Explained by: Healthy life expectancy",
+         "Freedom"="Explained by: Freedom to make life choices",
+         "Generosity"="Explained by: Generosity",
+         "PerceptionsOfCorruption"="Explained by: Perceptions of corruption",
+         "Dystopia"="Dystopia (1.88) + residual",
+         "HappinessScore"="Happiness score") %>%
+  select(Country, HappinessScore, GDP, SocialSupport, LifeExpectancy,
+         Freedom, Generosity, PerceptionsOfCorruption, Dystopia)
+```
+
+Run Stacked Barchart that works fine (Without Filter)
+```{r}
+sorted_data <- stackedBC_data[order(stackedBC_data$HappinessScore),] 
+sorted_data
+
+plot_ly(sorted_data, y=~Country, x=~GDP, name="GDP", type = 'bar', orientation = 'h', height = 3000) %>%
+  add_trace(x = ~SocialSupport, name = 'Social Support') %>%
+  add_trace(x = ~LifeExpectancy, name = 'Life Expectancy') %>%
+  add_trace(x = ~Freedom, name="Freedom") %>%
+  add_trace(x = ~Generosity, name="Generosity") %>%
+  add_trace(x = ~PerceptionsOfCorruption, name="Corruption") %>%
+  add_trace(x = ~Dystopia, name="Dystopia (1.88) + residual") %>%
+  layout(
+    yaxis = list(
+       categoryorder = "array",
+       categoryarray = ~Country
+    ),
+    barmode = 'stack'
+  )
+```
+
+Filtering and updating datatable
+```{r}
+
+#Storing datatable's headers as list
+headers <- (colnames(stackedBC_data))
+headers
+
+#Function (Testing for user's input)
+temp <- headers[3] #replacing this index 
+headers[3] <- headers[grep("Freedom", headers)]
+headers[6] <- temp
+headers
+
+sorted_data <- stackedBC_data[order(stackedBC_data[["Freedom"]]),] 
+sorted_data
+```
+
+Attempting at conditional add of trace
+```{r}
+#Plotting Stacked bar chart
+p <- plot_ly(sorted_data, type='bar', height = 600)
+
+for(col in headers) {
+  if(col == "GDP"){
+    p <- add_trace(p,x = ~GDP, y=~Country,  name = 'GDP') 
+  }else if(col == "SocialSupport"){
+    p <- add_trace(p,x = ~SocialSupport,
+                   y=~Country, type='bar', name = 'Social Support')
+  }else if(col == "LifeExpectancy"){
+    p <- add_trace(p,x = ~LifeExpectancy, 
+                   y=~Country, type='bar', name = 'Life Expectancy')
+  }else if(col == "Freedom"){
+    p <- add_trace(p,x = ~Freedom, 
+                   y=~Country, type='bar', name = 'Freedom')
+  }else if(col == "Generosity"){
+    p <- add_trace(p,x = ~Generosity, 
+                   y=~Country, type='bar', name = 'Generosity')
+  }else if(col == "PerceptionsOfCorruption"){
+    p <- add_trace(p,x = ~PerceptionsOfCorruption, 
+                   y=~Country, name = 'PerceptionsOfCorruption')
+  }else if(col == "Dystopia"){
+    p <- add_trace(p,x = ~Dystopia, 
+                   y=~Country, name = 'Dystopia')
+  }
+}
+
+p <-layout(p,
+    yaxis = list(
+       categoryorder = "array",
+       categoryarray = ~Country
+    ),
+    barmode="stack"
+  )
+
+p
+```
+
+
