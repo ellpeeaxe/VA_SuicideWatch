@@ -47,6 +47,12 @@ ui <- dashboardPage(
             column(width= 7, 
                    div(style="height:300px; overflow-y: scroll",
                        color = "teal", ribbon = FALSE, title_side = "top", collapsible = FALSE,
+                         selectInput(inputId = "stackedBC_sortby", label = "Sort by:",
+                                     choices = c("GDP", "SocialSupport", "LifeExpectancy",
+                                                 "Freedom", "Generosity", "PerceptionsOfCorruption", 
+                                                 "Dystopia"),
+                                     selected = 2005
+                         ),
                          plotlyOutput("barchart")
                    )
             )
@@ -242,6 +248,7 @@ server <- function(input, output) {
   })
   
   #World Stacked Bar Chart
+  
   stackedBC_data <- data2 %>% 
     rename("GDP"="Explained by: GDP per capita",
            "SocialSupport"="Explained by: Social support",
@@ -254,21 +261,26 @@ server <- function(input, output) {
     select(Country, HappinessScore, GDP, SocialSupport, LifeExpectancy,
            Freedom, Generosity, PerceptionsOfCorruption, Dystopia)
   
-  #Storing datatable's headers as list
-  headers <- (colnames(stackedBC_data))
+  headers <- reactive({
+    #Function (Testing for user's input)
+    headers <- (colnames(stackedBC_data)) #Storing datatable's headers as list
+    temp <- headers[3] #replacing this index 
+    headers[3] <- headers[grep(input$stackedBC_sortby, headers)]
+    headers[6] <- temp
+    headers
+  })
   
-  #Function (Testing for user's input)
-  temp <- headers[3] #replacing this index 
-  headers[3] <- headers[grep("Freedom", headers)]
-  headers[6] <- temp
-  
-  sorted_data <- stackedBC_data[order(stackedBC_data[["Freedom"]]),] 
+  sorted_data <- reactive({
+    sorted_data <- stackedBC_data[order(stackedBC_data[[input$stackedBC_sortby]]),] 
+    print(sorted_data)
+  })
   
   output$barchart <-renderPlotly({
     #Plotting Stacked bar chart
-    p <- plot_ly(sorted_data, type='bar', height = 600, width=600)
+    p <- plot_ly(sorted_data(), type='bar', height = 600, width=600)
+    print(headers())
     
-    for(col in headers) {
+    for(col in headers()) {
       if(col == "GDP"){
         p <- add_trace(p,x = ~GDP, y=~Country,  name = 'GDP') 
       }else if(col == "SocialSupport"){
@@ -299,7 +311,6 @@ server <- function(input, output) {
                ),
                barmode="stack"
     )
-    p
   })
   
   # World Choropleth Chart
