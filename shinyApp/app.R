@@ -49,22 +49,22 @@ ui <- dashboardPage(
         fluidRow(
           column(width = 9, 
                  box(width = 9,
-                     title = "World Happiness Index 2019 Bar Chart (Descending Order)",
-                     color = "teal", ribbon = FALSE, title_side = "top", collapsible = FALSE,
-                     
-                     radioButtons(
-                       inputId = "stackedAndSlopeToggle", 
-                       label = "View as:",
-                       c("Barchart" = "barchart",
-                         "Slope" = "slope"),
-                       selected = "barchart",
-                       inline = TRUE
+                   title = "World Happiness Index 2019 Bar Chart (Descending Order)",
+                   color = "teal", ribbon = FALSE, title_side = "top", collapsible = FALSE,
+                   
+                   fluidRow(
+                     div(style="display: inline-block; width: 150px",
+                       selectInput(
+                         inputId = "stackedAndSlopeToggle", 
+                         label = "View as:",
+                         c("Barchart" = "barchart",
+                           "Slope" = "slope"),
+                         selected = "barchart"  
+                       )
                      ),
-                     
-                     conditionalPanel(
-                       condition = "input.stackedAndSlopeToggle == 'barchart'",
-                       div(style="height:450px; overflow-y: scroll",
-                           color = "teal", ribbon = FALSE, title_side = "top", collapsible = FALSE,
+                     div(style="display: inline-block; width: 150px; margin-left: 20px",
+                         conditionalPanel(
+                           condition = "input.stackedAndSlopeToggle == 'barchart'",
                            selectInput(inputId = "stackedBC_sortby", label = "Sort by:",
                                        choices = c("Happiness Index" = "HappinessScore",
                                                    "GDP", 
@@ -74,27 +74,39 @@ ui <- dashboardPage(
                                                    "Corruption" = "PerceptionsOfCorruption", 
                                                    "Dystopia"),
                                        selected = 2018
-                           ),
+                           )
+                         ),
+                         conditionalPanel(
+                           condition = "input.stackedAndSlopeToggle == 'slope'",
+                           selectInput(inputId = "start_year", label = "From:",
+                                       choices = c(2005:2018),
+                                       selected = 2005
+                           )
+                         )
+                      ),
+                     div(style="display: inline-block; width: 150px; margin-left: 20px",
+                         conditionalPanel(
+                           condition = "input.stackedAndSlopeToggle == 'slope'",
+                           selectInput(inputId = "end_year", label = "To:",
+                                       choices = c(2005:2018),
+                                       selected = 2018
+                           )
+                         )
+                        )
+                    ),
+                     
+                     conditionalPanel(
+                       condition = "input.stackedAndSlopeToggle == 'barchart'",
+                       tags$hr(),
+                       div(style="height:450px;",
+                           color = "teal", ribbon = FALSE, title_side = "top", collapsible = FALSE,
                            plotlyOutput("barchart")
                        )
                      ),
                      
                      conditionalPanel(
                        condition = "input.stackedAndSlopeToggle == 'slope'",
-                       fluidRow(
-                         div(style="display: inline-block;vertical-align:top; width: 150px;",
-                             selectInput(inputId = "start_year", label = "From:",
-                                         choices = c(2005:2018),
-                                         selected = 2005
-                             )
-                         ),
-                         div(style="display: inline-block;vertical-align:top; width: 150px;",
-                             selectInput(inputId = "end_year", label = "To:",
-                                         choices = c(2005:2018),
-                                         selected = 2018
-                             )
-                         )
-                       ),
+                       tags$hr(),
                        fluidRow(
                          plotlyOutput("scatterplot")
                        )
@@ -306,7 +318,7 @@ server <- function(input, output) {
   
   output$barchart <-renderPlotly({
     #Plotting Stacked bar chart
-    p <- plot_ly(sorted_data(), type='bar', height = 500, width=600)
+    p <- plot_ly(sorted_data(), type='bar', height = 450, width=600)
     print(headers())
     
     for(col in headers()) {
