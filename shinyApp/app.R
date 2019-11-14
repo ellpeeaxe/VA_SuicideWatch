@@ -24,6 +24,12 @@ data3_geocode <- read.csv('https://raw.githubusercontent.com/plotly/datasets/mas
 colnames(data3_geocode)[colnames(data3_geocode)=="COUNTRY"] <- "Country"
 data2 <- merge(data2, data3_geocode[, c("Country","CODE")], by="Country")
 
+data1 <- merge(
+  data1 %>%
+    group_by(Year) %>%
+    summarise(average_happiness = mean(`Life Ladder`)), 
+  data1, by="Year")
+
 # Define UI for application
 ui <- dashboardPage(
   dashboardHeader(title = "Happiness Watch", inverted = TRUE),
@@ -489,9 +495,10 @@ server <- function(input, output) {
     data1 %>%
         rename("Country" = "Country name",
                "HappinessIndex" = "Life Ladder") %>%
-      select(Country, Year, HappinessIndex) %>% 
+      select(Country, Year, HappinessIndex, average_happiness) %>% 
       filter(Country == input$country_tab_selected)
   })
+  
   
   country_data_selected_measurements <- reactive({
     comparison_data %>%
@@ -501,6 +508,8 @@ server <- function(input, output) {
   
   output$happiness_timeseries <- renderPlotly({
     plot_ly(country_data_selected(), x = ~Year, y = ~HappinessIndex, mode = 'lines+markers') %>%
+      add_trace(y = ~HappinessIndex, name = "Happiness Index", mode = 'lines+markers')%>%
+      add_trace(y = ~average_happiness, name = "Average Happiness Index", mode = 'lines', line = list(color = 'rgb(169,169, 169)', dash = 'dot'))%>% 
       layout(
         height = 200,
         yaxis = list(title = "Happiness Index"
