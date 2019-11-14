@@ -47,83 +47,98 @@ ui <- dashboardPage(
       tabItem(
         tabName = "overview",
         fluidRow(
-          box(width = 7,
-            title = "World Happiness Index 2019 Bar Chart (Descending Order)",
-            color = "teal", ribbon = FALSE, title_side = "top", collapsible = FALSE,
-            column(width= 7, 
-                   div(style="height:300px; overflow-y: scroll",
-                       color = "teal", ribbon = FALSE, title_side = "top", collapsible = FALSE,
-                         selectInput(inputId = "stackedBC_sortby", label = "Sort by:",
-                                     choices = c("GDP", "SocialSupport", "LifeExpectancy",
-                                                 "Freedom", "Generosity", "PerceptionsOfCorruption", 
-                                                 "Dystopia"),
-                                     selected = 2005
+          column(width = 9, 
+                 box(width = 9,
+                     title = "World Happiness Index 2019 Bar Chart (Descending Order)",
+                     color = "teal", ribbon = FALSE, title_side = "top", collapsible = FALSE,
+                     
+                     radioButtons(
+                       inputId = "stackedAndSlopeToggle", 
+                       label = "View as:",
+                       c("Barchart" = "barchart",
+                         "Slope" = "slope"),
+                       selected = "barchart",
+                       inline = TRUE
+                     ),
+                     
+                     conditionalPanel(
+                       condition = "input.stackedAndSlopeToggle == 'barchart'",
+                       div(style="height:450px; overflow-y: scroll",
+                           color = "teal", ribbon = FALSE, title_side = "top", collapsible = FALSE,
+                           selectInput(inputId = "stackedBC_sortby", label = "Sort by:",
+                                       choices = c("Happiness Index" = "HappinessScore",
+                                                   "GDP", 
+                                                   "Social Support" = "SocialSupport", 
+                                                   "Life Expectancy" = "LifeExpectancy" ,
+                                                   "Freedom", "Generosity", 
+                                                   "Corruption" = "PerceptionsOfCorruption", 
+                                                   "Dystopia"),
+                                       selected = 2018
+                           ),
+                           plotlyOutput("barchart")
+                       )
+                     ),
+                     
+                     conditionalPanel(
+                       condition = "input.stackedAndSlopeToggle == 'slope'",
+                       fluidRow(
+                         div(style="display: inline-block;vertical-align:top; width: 150px;",
+                             selectInput(inputId = "start_year", label = "From:",
+                                         choices = c(2005:2018),
+                                         selected = 2005
+                             )
                          ),
-                         plotlyOutput("barchart")
-                   )
-            )
+                         div(style="display: inline-block;vertical-align:top; width: 150px;",
+                             selectInput(inputId = "end_year", label = "To:",
+                                         choices = c(2005:2018),
+                                         selected = 2018
+                             )
+                         )
+                       ),
+                       fluidRow(
+                         plotlyOutput("scatterplot")
+                       )
+                     ),
+                     
+                     
+                 ),
           ),
-          box(width = 9,
-              title = "World Happiness Index 2019 Choropleth Plot",
-              color = "teal", ribbon = FALSE, title_side = "top", collapsible = FALSE,
-              column(width = 10,
-                     div(style="height:300px",
+          column(width = 7,
+                 box(width = 7, 
+                     title = "World Happiness Index 2019 Choropleth Plot",
+                     color = "teal", ribbon = FALSE, title_side = "top", collapsible = FALSE,
+                     div(style="height:200px",
                          plotlyOutput("choroplethplot")
-                    )
-              )
-          )
-        ),
-        fluidRow(
-          box(width = 7,
-              style="height:450px",
-              title = "World Happiness Index Scatter Plot",
-              color = "teal", ribbon = FALSE, title_side = "top", collapsible = FALSE,
-              fluidRow(
-                div(style="display: inline-block;vertical-align:top; width: 150px;",
-                       selectInput(inputId = "start_year", label = "From:",
-                                   choices = c(2005:2018),
-                                   selected = 2005
-                       )
-                ),
-                div(style="display: inline-block;vertical-align:top; width: 150px;",
-                       selectInput(inputId = "end_year", label = "To:",
-                                   choices = c(2005:2018),
-                                   selected = 2018
-                       )
-                )
-              ),
-              column(width = 5,
-                     plotlyOutput("scatterplot")
-              )
-              
-          ),
-          box(width = 9,
-              style="height:450px",
-              title = "Happiness Score Distribution",
-              color = "teal", ribbon = FALSE, title_side = "top", collapsible = FALSE,
-              column(
-                width = 9,
-                radioButtons(
-                  inputId = "ridge23toggle", 
-                  label = "View as:",
-                  c("Percentile" = "percentile",
-                    "Value" = "value"),
-                  selected = "percentile",
-                  inline = TRUE
-                )
-              ),
-              column(width = 9,
-                     conditionalPanel(
-                       condition = "input.ridge23toggle == 'value'",
-                       plotOutput("ridgeplot2")
                      )
-              ),
-              column(width = 9,
-                     conditionalPanel(
-                       condition = "input.ridge23toggle == 'percentile'",
-                       plotOutput("ridgeplot3")
+                 ),
+                 box(width = 9,
+                     style="height:250px",
+                     title = "Happiness Score Distribution",
+                     color = "teal", ribbon = FALSE, title_side = "top", collapsible = FALSE,
+                     column(
+                       width = 9,
+                       radioButtons(
+                         inputId = "ridge23toggle", 
+                         label = "View as:",
+                         c("Percentile" = "percentile",
+                           "Value" = "value"),
+                         selected = "percentile",
+                         inline = TRUE
+                       )
+                     ),
+                     column(width = 9,
+                            conditionalPanel(
+                              condition = "input.ridge23toggle == 'value'",
+                              plotOutput("ridgeplot2", height = 200)
+                            )
+                     ),
+                     column(width = 9,
+                            conditionalPanel(
+                              condition = "input.ridge23toggle == 'percentile'",
+                              plotOutput("ridgeplot3", height = 200)
+                            )
                      )
-              )
+                 )
           )
         )
       ),
@@ -139,7 +154,7 @@ ui <- dashboardPage(
               title = "Country A",
               color = "teal", ribbon = FALSE, title_side = "top", collapsible = FALSE,
               selectInput(inputId = "first_country", label = "Select country:", 
-                         choices = levels(as.factor(data2$Country)), selected = "Afghanistan"),
+                          choices = levels(as.factor(data2$Country)), selected = "Afghanistan"),
               plotlyOutput("countryA_barchart"),
               plotOutput("countryAridge")
           ),
@@ -227,9 +242,9 @@ server <- function(input, output) {
   
   output$ridgeplot1 <- renderPlot({
     filtered_data <- subset(data1,
-                Year %in% input$ridge1years)
+                            Year %in% input$ridge1years)
     ggplot(filtered_data, aes(y=as.factor(Year),
-                      x=`Life Ladder`)) +
+                              x=`Life Ladder`)) +
       geom_density_ridges(alpha=0.5) +
       scale_y_discrete(expand = c(0.01, 0)) +  
       scale_x_continuous(expand = c(0, 0))+
@@ -268,55 +283,64 @@ server <- function(input, output) {
            Freedom, Generosity, PerceptionsOfCorruption, Dystopia)
   
   headers <- reactive({
-    #Function (Testing for user's input)
-    headers <- (colnames(stackedBC_data)) #Storing datatable's headers as list
-    temp <- headers[3] #replacing this index 
-    headers[3] <- headers[grep(input$stackedBC_sortby, headers)]
-    headers[6] <- temp
+    # Storing datatable's headers as list
+    headers <- (colnames(stackedBC_data))
+    
+    # Function (Testing for user's input)
+    col <- input$stackedBC_sortby
+    
+    # Don't need to change position of HappinessScore
+    if(col != "HappinessScore"){
+      temp <- headers[3] #replacing this index 
+      indexOfCol <- grep(col, headers)
+      
+      headers[3] <- col
+      headers[indexOfCol] <- temp
+    }
     headers
   })
   
   sorted_data <- reactive({
     sorted_data <- stackedBC_data[order(stackedBC_data[[input$stackedBC_sortby]]),] 
-    print(sorted_data)
   })
   
   output$barchart <-renderPlotly({
     #Plotting Stacked bar chart
-    p <- plot_ly(sorted_data(), type='bar', height = 600, width=600)
+    p <- plot_ly(sorted_data(), type='bar', height = 500, width=600)
     print(headers())
     
     for(col in headers()) {
       if(col == "GDP"){
-        p <- add_trace(p,x = ~GDP, y=~Country,  name = 'GDP') 
+        p <- add_trace(p,x = ~GDP, y=~Country,  name = 'GDP', marker= list(color="orange")) 
       }else if(col == "SocialSupport"){
         p <- add_trace(p,x = ~SocialSupport,
-                       y=~Country, type='bar', name = 'Social Support')
+                       y=~Country, type='bar', name = 'Social Support', marker= list(color="green"))
       }else if(col == "LifeExpectancy"){
         p <- add_trace(p,x = ~LifeExpectancy, 
-                       y=~Country, type='bar', name = 'Life Expectancy')
+                       y=~Country, type='bar', name = 'Life Expectancy', marker= list(color="red"))
       }else if(col == "Freedom"){
         p <- add_trace(p,x = ~Freedom, 
-                       y=~Country, type='bar', name = 'Freedom')
+                       y=~Country, type='bar', name = 'Freedom', marker= list(color="yellow"))
       }else if(col == "Generosity"){
         p <- add_trace(p,x = ~Generosity, 
-                       y=~Country, type='bar', name = 'Generosity')
+                       y=~Country, type='bar', name = 'Generosity', marker= list(color="blue"))
       }else if(col == "PerceptionsOfCorruption"){
         p <- add_trace(p,x = ~PerceptionsOfCorruption, 
-                       y=~Country, name = 'PerceptionsOfCorruption')
+                       y=~Country, name = 'Corruption', marker= list(color="grey"))
       }else if(col == "Dystopia"){
         p <- add_trace(p,x = ~Dystopia, 
-                       y=~Country, name = 'Dystopia')
+                       y=~Country, name = 'Dystopia', marker= list(color="purple"))
       }
     }
     
     p <-layout(p,
+               width = 550,
                yaxis = list(
                  categoryorder = "array",
                  categoryarray = ~Country
                ),
-               barmode="stack"
-    )
+               barmode="stack",
+               legend=list(traceorder = "normal"))
   })
   
   # World Choropleth Chart
@@ -326,7 +350,7 @@ server <- function(input, output) {
     showcoastlines = FALSE,
     projection = list(type = 'Mercator')
   )
-
+  
   output$choroplethplot <- renderPlotly({
     plot_geo(RidgePlot_and_Chloro) %>%
       add_trace(
@@ -335,7 +359,7 @@ server <- function(input, output) {
       ) %>%
       colorbar(title = 'Happiness') %>%
       layout(
-        geo = geo, paper_bgcolor='transparent')
+        geo = geo, paper_bgcolor='transparent', width = 500)
     
   })
   
@@ -352,7 +376,7 @@ server <- function(input, output) {
       select(country,year1,year2) %>%
       mutate(change = round((year2 - year1)/year1, digits = 2))
   })
-
+  
   
   output$scatterplot <- renderPlotly({
     plot_ly(scatterplot_data(), name=~country, x = ~year2, y = ~year1, 
@@ -471,7 +495,7 @@ server <- function(input, output) {
       filter(Country == input$second_country2 & Year == input$comparison_year2) %>% 
       gather(Category, Value, MinMaxGDP, MinMaxSS, MinMaxLE, MinMaxFreedom, MinMaxCorruption, MinMaxGenerosity)
   })
-
+  
   output$countryB_radar <- renderPlotly({
     plot_ly(countryB_data(),
             type = 'scatterpolar',
@@ -493,8 +517,8 @@ server <- function(input, output) {
   #Country Tab
   country_data_selected <- reactive({
     data1 %>%
-        rename("Country" = "Country name",
-               "HappinessIndex" = "Life Ladder") %>%
+      rename("Country" = "Country name",
+             "HappinessIndex" = "Life Ladder") %>%
       select(Country, Year, HappinessIndex, average_happiness) %>% 
       filter(Country == input$country_tab_selected)
   })
@@ -513,7 +537,7 @@ server <- function(input, output) {
       layout(
         height = 200,
         yaxis = list(title = "Happiness Index"
-      ))
+        ))
   })
   
   output$measures_timeseries <- renderPlotly({
@@ -529,7 +553,7 @@ server <- function(input, output) {
         yaxis = list(title = "Normalized Value"
         ))
   })
-    
+  
 }
 # Run the application 
 shinyApp(ui = ui, server = server)
