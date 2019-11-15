@@ -110,10 +110,10 @@ ui <- dashboardPage(
                        fluidRow(
                          plotlyOutput("scatterplot")
                        )
-                     ),
+                     )
                      
                      
-                 ),
+                 )
           ),
           column(width = 7,
                    box(
@@ -148,7 +148,7 @@ ui <- dashboardPage(
                                 plotOutput("ridgeplot3", height = 200)
                               )
                        )
-                   ),
+                   )
                  
           )
         )
