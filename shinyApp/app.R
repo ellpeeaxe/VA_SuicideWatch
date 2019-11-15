@@ -8,7 +8,8 @@
 #
 
 packages = c('devtools', 'tidyverse', 'ggridges','readxl','dplyr',
-             'plotly','shiny','shiny.semantic','semantic.dashboard','ggplot2', 'DT', 'scales', 'rgdal', 'leaflet', 'RColorBrewer')
+             'plotly','shiny','shiny.semantic','semantic.dashboard','ggplot2', 
+             'DT', 'scales', 'rgdal', 'leaflet', 'RColorBrewer','png','base64enc')
 
 for (p in packages){
   if(!require(p, character.only = T)){
@@ -19,6 +20,7 @@ for (p in packages){
 
 data1 <- read_excel("data/Happiness Index.xlsx", sheet = 1)
 data2 <- read_excel("data/Happiness Index.xlsx", sheet = 2)
+HWlogo <- base64enc::dataURI(file="img/HW_Logo.png", mime="image/png")
 
 world_spdf <- readOGR( 
   dsn= paste0(getwd(),"/data/shape_file/") , 
@@ -36,29 +38,52 @@ ui <- dashboardPage(
   dashboardHeader(title = "Happiness Watch", inverted = TRUE),
   dashboardSidebar(
     sidebarMenu(
-      menuItem(tabName = "overview", "Overview"),
+      menuItem(tabName = "home", "Home"),
+      menuItem(tabName = "overview", "Global Overview"),
       menuItem(tabName = "comparison", "Country Comparison"),
-      menuItem(tabName = "country", "Country Time-Series Dashboard")
+      menuItem(tabName = "country", "Country Time-Series")
     )
   ),
   dashboardBody(
     tabItems(
       selected = 1,
       tabItem(
+        tabName = "home",
+        fluidRow(
+          column(
+            width = 16,
+            align = "center",
+            box(
+              div(style="padding: 60px; height: 700px",
+                list(img(src=HWlogo,height='300px')),
+                fluidRow(
+                  div(style="font-size: 25px; margin-bottom: 25px; margin-top: 50px",
+                    "Traditionally, a country’s well-being has been measured on economic variables like GDP or unemployment rate. However, no institution, nation or group of people can really be properly understood without also factoring in a number of other elements."
+                  ),
+                  div(style="font-size: 25px",
+                    "One of these key elements is happiness. What contributes to a country’s happiness? Why are some countries happier than others? Are there any trends or patterns we can discern from the available data? With reference to the World Happiness Report, we attempt to visualize the factors that contribute to a country’s happiness on a global scale."
+                  )
+                )
+              )
+            )
+          )
+        )
+      ),
+      tabItem(
         tabName = "overview",
         fluidRow(
           column(width = 9,
                  box(
-                     style="height:850px",
-                   title = "World Happiness Index 2019 Bar Chart (Descending Order)",
-                   color = "teal", ribbon = FALSE, title_side = "top", Collapsible = FALSE,
+                     style="height:750px",
+                   title = "World Happiness Index Rankings",
+                   color = "teal", ribbon = FALSE, title_side = "top", collapsible = FALSE,
                    fluidRow(
-                     div(style="display: inline-block; width: 150px",
+                     div(style="display: inline-block; width: 170px",
                        selectInput(
                          inputId = "stackedAndSlopeToggle", 
                          label = "View as:",
-                         c("Barchart" = "barchart",
-                           "Slope" = "slope"),
+                         c("Stacked Bar Chart" = "barchart",
+                           "Scatterplot" = "scatter"),
                          selected = "barchart"  
                        )
                      ),
@@ -77,7 +102,7 @@ ui <- dashboardPage(
                            )
                          ),
                          conditionalPanel(
-                           condition = "input.stackedAndSlopeToggle == 'slope'",
+                           condition = "input.stackedAndSlopeToggle == 'scatter'",
                            selectInput(inputId = "start_year", label = "From:",
                                        choices = c(2005:2018),
                                        selected = 2005
@@ -86,7 +111,7 @@ ui <- dashboardPage(
                       ),
                      div(style="display: inline-block; width: 150px; margin-left: 20px",
                          conditionalPanel(
-                           condition = "input.stackedAndSlopeToggle == 'slope'",
+                           condition = "input.stackedAndSlopeToggle == 'scatter'",
                            selectInput(inputId = "end_year", label = "To:",
                                        choices = c(2005:2018),
                                        selected = 2018
@@ -104,7 +129,7 @@ ui <- dashboardPage(
                      ),
                      
                      conditionalPanel(
-                       condition = "input.stackedAndSlopeToggle == 'slope'",
+                       condition = "input.stackedAndSlopeToggle == 'scatter'",
                        tags$hr(),
                        fluidRow(
                          plotlyOutput("scatterplot")
@@ -116,15 +141,19 @@ ui <- dashboardPage(
           ),
           column(width = 7,
                    box(
+                       style= "height: 400px",
                        title = "World Happiness Index 2019 Choropleth Plot",
-                       color = "teal", ribbon = FALSE, title_side = "top", Collapsible = FALSE,
+                       color = "teal", ribbon = FALSE, title_side = "top", collapsible = FALSE,
                            leafletOutput("choroplethplot")
                        
                    ),
-                   box(
-                       title = "Happiness Score Distribution",
-                       color = "teal", ribbon = FALSE, title_side = "top", collapsible = FALSE,
-                       plotOutput("ridgeplot", height = 200)
+                   div(style="padding-top:25px",
+                     box(
+                         style= "height: 275px",
+                         title = "World Happiness Index 2019 Component Distribution",
+                         color = "teal", ribbon = FALSE, title_side = "top", collapsible = FALSE,
+                         plotOutput("ridgeplot", height = 270)
+                     )
                    )
                  
           )
@@ -146,7 +175,8 @@ ui <- dashboardPage(
         ),
         fluidRow(
           box(width = 16,
-              title = "Country A",
+              style= "height: 350px",
+              title = "Happiness Index Component Breakdown",
               color = "teal", ribbon = FALSE, title_side = "top", collapsible = FALSE,
               div(style="display: inline-block; width: 150px",
                   selectInput(
@@ -161,27 +191,29 @@ ui <- dashboardPage(
                 condition = "input.barAndRadarToggle == 'groupedbar'",
                 tags$hr(),
                 color = "teal", ribbon = FALSE, title_side = "top", collapsible = FALSE,
-                plotlyOutput("country_barchart")
+                plotlyOutput("country_barchart", height = 250)
               ),
               
               conditionalPanel(
                 condition = "input.barAndRadarToggle == 'radar'",
                 tags$hr(),
-                plotlyOutput("country_radar")
+                plotlyOutput("country_radar", height = 250)
               )
           )
         ),
         fluidRow(
           #First Country 
           box(width = 8,
-              title = "Country A",
+              style= "height: 250px",
+              title = "First Country",
               color = "teal", ribbon = FALSE, title_side = "top", collapsible = FALSE,
-              plotOutput("countryAridge")
+              plotOutput("countryAridge", height = 240)
           ),
           box(width = 8,
-              title = "Country B",
+              style= "height: 250px",
+              title = "Second Country",
               color = "teal", ribbon = FALSE, title_side = "top", collapsible = FALSE,
-              plotOutput("countryBridge")
+              plotOutput("countryBridge", height = 240)
           )
         )
       ),
@@ -243,6 +275,7 @@ server <- function(input, output) {
       geom_density_ridges(alpha=0.5) +
       scale_y_discrete(expand = c(0.01, 0)) +  
       scale_x_continuous(expand = c(0, 0))+
+      scale_fill_discrete(name = "", labels = c("Freedom", "Generosity", "Corruption","GDP","Life Expectancy","Social Support")) + 
       theme(axis.text=element_text(size=10), legend.position = "bottom")
   })
   
@@ -284,30 +317,30 @@ server <- function(input, output) {
   
   output$barchart <-renderPlotly({
     #Plotting Stacked bar chart
-    p <- plot_ly(sorted_data(), type='bar', height = 780, width=600)
+    p <- plot_ly(sorted_data(), type='bar', height = 670, width=600)
     print(headers())
     
     for(col in headers()) {
       if(col == "GDP"){
-        p <- add_trace(p,x = ~GDP, y=~Country,  name = 'GDP', marker= list(color="orange")) 
+        p <- add_trace(p,x = ~GDP, y=~Country,  name = 'GDP', marker= list(color='rgba(109, 166, 167, 1)')) 
       }else if(col == "SocialSupport"){
         p <- add_trace(p,x = ~SocialSupport,
-                       y=~Country, type='bar', name = 'Social Support', marker= list(color="green"))
+                       y=~Country, type='bar', name = 'Social Support', marker= list(color='rgba(212, 154, 203, 1)'))
       }else if(col == "LifeExpectancy"){
         p <- add_trace(p,x = ~LifeExpectancy, 
-                       y=~Country, type='bar', name = 'Life Expectancy', marker= list(color="red"))
+                       y=~Country, type='bar', name = 'Life Expectancy', marker= list(color='rgba(173, 201, 249, 1)'))
       }else if(col == "Freedom"){
         p <- add_trace(p,x = ~Freedom, 
-                       y=~Country, type='bar', name = 'Freedom', marker= list(color="yellow"))
+                       y=~Country, type='bar', name = 'Freedom', marker= list(color='rgba(255, 188, 183, 1)'))
       }else if(col == "Generosity"){
         p <- add_trace(p,x = ~Generosity, 
-                       y=~Country, type='bar', name = 'Generosity', marker= list(color="blue"))
+                       y=~Country, type='bar', name = 'Generosity', marker= list(color='rgba(213, 200, 140, 1)'))
       }else if(col == "PerceptionsOfCorruption"){
         p <- add_trace(p,x = ~PerceptionsOfCorruption, 
-                       y=~Country, name = 'Corruption', marker= list(color="grey"))
+                       y=~Country, name = 'Corruption', marker= list(color='rgba(130, 191, 141, 1)'))
       }else if(col == "Dystopia"){
         p <- add_trace(p,x = ~Dystopia, 
-                       y=~Country, name = 'Dystopia', marker= list(color="purple"))
+                       y=~Country, name = 'Dystopia', marker= list(color='rgba(174, 176, 183, 1)'))
       }
     }
     
@@ -315,16 +348,21 @@ server <- function(input, output) {
                width = 550,
                yaxis = list(
                  categoryorder = "array",
-                 categoryarray = ~Country
+                 categoryarray = ~Country,
+                 showticklabels= FALSE
                ),
                barmode="stack",
-               legend=list(traceorder = "normal"))
+               legend = list(orientation = "h",   # show entries horizontally
+                             xanchor = "center",  # use center of legend as anchor
+                             traceorder = "normal",
+                             x = 0.5)
+    )
   })
   
   #new choropleth
   # Create a color palette with handmade bins.
   mybins <- c(0,2,4,6,8)
-  mypalette <- colorBin( palette="YlOrRd", domain=world_spdf@data$HappinessScore, na.color="white", bins=mybins)
+  mypalette <- colorBin( palette="PuBuGn", domain=world_spdf@data$HappinessScore, na.color="white", bins=mybins)
   
   # Prepare the text for tooltips:
   mytext <- paste(
@@ -378,7 +416,7 @@ server <- function(input, output) {
   output$scatterplot <- renderPlotly({
     plot_ly(scatterplot_data(), name=~country, x = ~year2, y = ~year1, 
             type = 'scatter', mode = 'markers', text = ~paste("Country :", country, "<br>Change: ", change),
-            color= ~change, colors = c('red','green'))%>%
+            color= ~change, colors = c('#F96997','#2EB49E'))%>%
       layout(xaxis = list(title = input$end_year), yaxis = list(title = input$start_year), showlegend = FALSE,geo = geo, paper_bgcolor='transparent') 
   })
   
@@ -420,6 +458,7 @@ server <- function(input, output) {
       filter(Country == input$first_country & Year == input$comparison_year) %>% 
       gather(Category, Value, MinMaxGDP, MinMaxSS, MinMaxLE, MinMaxFreedom, MinMaxCorruption, MinMaxGenerosity)
   })
+  
   # Comparison Tab - Country B Radar
   countryB_data <- reactive({
     countryB_data <- comparison_data %>% 
@@ -469,7 +508,9 @@ server <- function(input, output) {
       geom_density_ridges(alpha=0.5) +
       scale_y_discrete(expand = c(0.01, 0)) +  
       scale_x_continuous(expand = c(0, 0))+
-      theme(axis.text=element_text(size=10), legend.position = "bottom")
+      scale_fill_discrete(name = "", labels = c("Corruption", "Freedom", "GDP","Generosity","Life Expectancy","Social Support")) + 
+      theme(axis.text=element_text(size=10,), legend.position = "bottom") +
+      labs(title = paste(input$first_country, "Component Distribution"))
   })
   
   # Comparison Tab - Country B Ridge
@@ -485,7 +526,9 @@ server <- function(input, output) {
       geom_density_ridges(alpha=0.5) +
       scale_y_discrete(expand = c(0.01, 0)) +  
       scale_x_continuous(expand = c(0, 0))+
-      theme(axis.text=element_text(size=10), legend.position = "bottom")
+      scale_fill_discrete(name = "", labels = c("Corruption", "Freedom", "GDP","Generosity","Life Expectancy","Social Support")) + 
+      theme(axis.text=element_text(size=10), legend.position = "bottom") +
+      labs(title = paste(input$second_country, "Component Distribution"))
   })
   
   
