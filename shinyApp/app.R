@@ -8,7 +8,7 @@
 #
 
 packages = c('devtools', 'tidyverse', 'ggridges','readxl','dplyr',
-             'plotly','shiny','shiny.semantic','semantic.dashboard','ggplot2', 'DT', 'scales', 'rgdal')
+             'plotly','shiny','shiny.semantic','semantic.dashboard','ggplot2', 'DT', 'scales', 'rgdal', 'leaflet', 'RColorBrewer')
 
 for (p in packages){
   if(!require(p, character.only = T)){
@@ -20,10 +20,11 @@ for (p in packages){
 data1 <- read_excel("data/Happiness Index.xlsx", sheet = 1)
 data2 <- read_excel("data/Happiness Index.xlsx", sheet = 2)
 
-data3_geocode <- read.csv('https://raw.githubusercontent.com/plotly/datasets/master/2014_world_gdp_with_codes.csv')
-colnames(data3_geocode)[colnames(data3_geocode)=="COUNTRY"] <- "Country"
-data2 <- merge(data2, data3_geocode[, c("Country","CODE")], by="Country")
-
+world_spdf <- readOGR( 
+  dsn= paste0(getwd(),"/data/shape_file/") , 
+  layer="TM_WORLD_BORDERS_SIMPL-0.3",
+  verbose=FALSE
+)
 data1 <- merge(
   data1 %>%
     group_by(Year) %>%
@@ -47,11 +48,11 @@ ui <- dashboardPage(
       tabItem(
         tabName = "overview",
         fluidRow(
-          column(width = 9, 
-                 box(width = 9,
+          column(width = 9,
+                 box(
+                     style="height:850px",
                    title = "World Happiness Index 2019 Bar Chart (Descending Order)",
-                   color = "teal", ribbon = FALSE, title_side = "top", collapsible = FALSE,
-                   
+                   color = "teal", ribbon = FALSE, title_side = "top", Collapsible = FALSE,
                    fluidRow(
                      div(style="display: inline-block; width: 150px",
                        selectInput(
@@ -98,10 +99,9 @@ ui <- dashboardPage(
                      conditionalPanel(
                        condition = "input.stackedAndSlopeToggle == 'barchart'",
                        tags$hr(),
-                       div(style="height:450px;",
-                           color = "teal", ribbon = FALSE, title_side = "top", collapsible = FALSE,
-                           plotlyOutput("barchart")
-                       )
+                       color = "teal", ribbon = FALSE, title_side = "top", collapsible = FALSE,
+                       plotlyOutput("barchart")
+                       
                      ),
                      
                      conditionalPanel(
@@ -116,41 +116,40 @@ ui <- dashboardPage(
                  ),
           ),
           column(width = 7,
-                 box(width = 7, 
-                     title = "World Happiness Index 2019 Choropleth Plot",
-                     color = "teal", ribbon = FALSE, title_side = "top", collapsible = FALSE,
-                     div(style="height:200px",
-                         plotlyOutput("choroplethplot")
-                     )
-                 ),
-                 box(width = 9,
-                     style="height:250px",
-                     title = "Happiness Score Distribution",
-                     color = "teal", ribbon = FALSE, title_side = "top", collapsible = FALSE,
-                     column(
-                       width = 9,
-                       radioButtons(
-                         inputId = "ridge23toggle", 
-                         label = "View as:",
-                         c("Percentile" = "percentile",
-                           "Value" = "value"),
-                         selected = "percentile",
-                         inline = TRUE
+                   box(
+                       title = "World Happiness Index 2019 Choropleth Plot",
+                       color = "teal", ribbon = FALSE, title_side = "top", Collapsible = FALSE,
+                           leafletOutput("choroplethplot")
+                       
+                   ),
+                   box(
+                       title = "Happiness Score Distribution",
+                       color = "teal", ribbon = FALSE, title_side = "top", collapsible = FALSE,
+                       column(
+                         width = 9,
+                         radioButtons(
+                           inputId = "ridge23toggle", 
+                           label = "View as:",
+                           c("Percentile" = "percentile",
+                             "Value" = "value"),
+                           selected = "percentile",
+                           inline = TRUE
+                         )
+                       ),
+                       column(width = 9,
+                              conditionalPanel(
+                                condition = "input.ridge23toggle == 'value'",
+                                plotOutput("ridgeplot2", height = 200)
+                              )
+                       ),
+                       column(width = 9,
+                              conditionalPanel(
+                                condition = "input.ridge23toggle == 'percentile'",
+                                plotOutput("ridgeplot3", height = 200)
+                              )
                        )
-                     ),
-                     column(width = 9,
-                            conditionalPanel(
-                              condition = "input.ridge23toggle == 'value'",
-                              plotOutput("ridgeplot2", height = 200)
-                            )
-                     ),
-                     column(width = 9,
-                            conditionalPanel(
-                              condition = "input.ridge23toggle == 'percentile'",
-                              plotOutput("ridgeplot3", height = 200)
-                            )
-                     )
-                 )
+                   ),
+                 
           )
         )
       ),
@@ -251,6 +250,10 @@ server <- function(input, output) {
     gather( key = "PercentFactor", value = "PercentValue", `GDP_Percent`:`PerceptionsOfCorruption_Percent`, na.rm = FALSE, convert = FALSE, factor_key = FALSE)
   
   data2_sorted <- RidgePlot_and_Chloro[order(RidgePlot_and_Chloro$"HappinessScore"),]
+  shape.data <- world_spdf@data
+  country.data <- select(RidgePlot_and_Chloro, Country, HappinessScore)
+  shape.data <- merge(country.data, shape.data, by.x=c("Country"), by.y=c("NAME") )
+  world_spdf@data <- shape.data
   
   output$ridgeplot1 <- renderPlot({
     filtered_data <- subset(data1,
@@ -318,7 +321,7 @@ server <- function(input, output) {
   
   output$barchart <-renderPlotly({
     #Plotting Stacked bar chart
-    p <- plot_ly(sorted_data(), type='bar', height = 450, width=600)
+    p <- plot_ly(sorted_data(), type='bar', height = 780, width=600)
     print(headers())
     
     for(col in headers()) {
@@ -355,23 +358,37 @@ server <- function(input, output) {
                legend=list(traceorder = "normal"))
   })
   
-  # World Choropleth Chart
-  l <- list(color = toRGB("grey"), width = 0.5)
-  geo <- list(
-    showframe = FALSE,
-    showcoastlines = FALSE,
-    projection = list(type = 'Mercator')
-  )
+  #new choropleth
+  # Create a color palette with handmade bins.
+  mybins <- c(0,2,4,6,8)
+  mypalette <- colorBin( palette="YlOrRd", domain=world_spdf@data$HappinessScore, na.color="white", bins=mybins)
   
-  output$choroplethplot <- renderPlotly({
-    plot_geo(RidgePlot_and_Chloro) %>%
-      add_trace(
-        z = ~HappinessScore, color = ~HappinessScore, colors = 'Blues',
-        text = ~Country, locations = ~CODE, marker = list(line = l)
+  # Prepare the text for tooltips:
+  mytext <- paste(
+    "Country: ", world_spdf@data$Country,"<br/>", 
+    "Happiness Index: ", round(world_spdf@data$HappinessScore, 2), 
+    sep="") %>%
+    lapply(htmltools::HTML)
+  
+  # Final Map
+  output$choroplethplot <- renderLeaflet({
+    leaflet(world_spdf) %>% 
+      addTiles()  %>% 
+      setView( lat=10, lng=0 , zoom = 0.5) %>%
+      addPolygons( 
+        fillColor = ~mypalette(HappinessScore), 
+        stroke=TRUE, 
+        fillOpacity = 0.9, 
+        color="white", 
+        weight=0.3,
+        label = mytext,
+        labelOptions = labelOptions( 
+          style = list("font-weight" = "normal", padding = "3px 8px"), 
+          textsize = "13px", 
+          direction = "auto"
+        )
       ) %>%
-      colorbar(title = 'Happiness') %>%
-      layout(
-        geo = geo, paper_bgcolor='transparent', width = 500)
+      addLegend( pal=mypalette, values=~HappinessScore, opacity=0.8, title = "Happiness Index", position = "bottomleft" )
     
   })
   
@@ -389,6 +406,11 @@ server <- function(input, output) {
       mutate(change = round((year2 - year1)/year1, digits = 2))
   })
   
+  geo <- list(
+    showframe = FALSE,
+    showcoastlines = FALSE,
+    projection = list(type = 'Mercator')
+  )
   
   output$scatterplot <- renderPlotly({
     plot_ly(scatterplot_data(), name=~country, x = ~year2, y = ~year1, 
