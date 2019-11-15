@@ -38,7 +38,6 @@ ui <- dashboardPage(
     sidebarMenu(
       menuItem(tabName = "overview", "Overview"),
       menuItem(tabName = "comparison", "Country Comparison"),
-      menuItem(tabName = "comparison2", "Country Comparison 2"),
       menuItem(tabName = "country", "Country Time-Series Dashboard")
     )
   ),
@@ -125,29 +124,7 @@ ui <- dashboardPage(
                    box(
                        title = "Happiness Score Distribution",
                        color = "teal", ribbon = FALSE, title_side = "top", collapsible = FALSE,
-                       column(
-                         width = 9,
-                         radioButtons(
-                           inputId = "ridge23toggle", 
-                           label = "View as:",
-                           c("Percentile" = "percentile",
-                             "Value" = "value"),
-                           selected = "percentile",
-                           inline = TRUE
-                         )
-                       ),
-                       column(width = 9,
-                              conditionalPanel(
-                                condition = "input.ridge23toggle == 'value'",
-                                plotOutput("ridgeplot2", height = 200)
-                              )
-                       ),
-                       column(width = 9,
-                              conditionalPanel(
-                                condition = "input.ridge23toggle == 'percentile'",
-                                plotOutput("ridgeplot3", height = 200)
-                              )
-                       )
+                       plotOutput("ridgeplot", height = 200)
                    )
                  
           )
@@ -157,49 +134,54 @@ ui <- dashboardPage(
         tabName = "comparison",
         fluidRow(
           selectInput(inputId = "comparison_year", label = "Select year:", 
-                      choices = c(2005:2018), selected = 2018)
+                      choices = c(2005:2018), selected = 2018),
+          div(style="display: inline-block; width: 150px; margin-left: 20px",
+            selectInput(inputId = "first_country", label = "Select country:", 
+                        choices = levels(as.factor(data2$Country)), selected = "Finland")
+          ),
+          div(style="display: inline-block; width: 150px; margin-left: 20px",
+            selectInput(inputId = "second_country", label = "Select country:",
+                        choices = levels(as.factor(data2$Country)), selected = "Afghanistan")
+          )
+        ),
+        fluidRow(
+          box(width = 16,
+              title = "Country A",
+              color = "teal", ribbon = FALSE, title_side = "top", collapsible = FALSE,
+              div(style="display: inline-block; width: 150px",
+                  selectInput(
+                    inputId = "barAndRadarToggle", 
+                    label = "View as:",
+                    c("Grouped Bar" = "groupedbar",
+                      "Radar" = "radar"),
+                    selected = "groupedbar"  
+                  )
+              ),
+              conditionalPanel(
+                condition = "input.barAndRadarToggle == 'groupedbar'",
+                tags$hr(),
+                color = "teal", ribbon = FALSE, title_side = "top", collapsible = FALSE,
+                plotlyOutput("country_barchart")
+              ),
+              
+              conditionalPanel(
+                condition = "input.barAndRadarToggle == 'radar'",
+                tags$hr(),
+                plotlyOutput("country_radar")
+              )
+          )
         ),
         fluidRow(
           #First Country 
           box(width = 8,
               title = "Country A",
               color = "teal", ribbon = FALSE, title_side = "top", collapsible = FALSE,
-              selectInput(inputId = "first_country", label = "Select country:", 
-                          choices = levels(as.factor(data2$Country)), selected = "Afghanistan"),
-              plotlyOutput("countryA_barchart"),
               plotOutput("countryAridge")
           ),
           box(width = 8,
               title = "Country B",
               color = "teal", ribbon = FALSE, title_side = "top", collapsible = FALSE,
-              selectInput(inputId = "second_country", label = "Select country:",
-                          choices = levels(as.factor(data2$Country)), selected = "Afghanistan"),
-              plotlyOutput("countryB_barchart"),
               plotOutput("countryBridge")
-          )
-        )
-      ),
-      tabItem(
-        tabName = "comparison2",
-        fluidRow(
-          selectInput(inputId = "comparison_year2", label = "Select year:", 
-                      choices = c(2005:2018), selected = 2018)
-        ),
-        fluidRow(
-          #First Country 
-          box(width = 8,
-              title = "Country A",
-              color = "teal", ribbon = FALSE, title_side = "top", collapsible = FALSE,
-              selectInput(inputId = "first_country2", label = "Select country:", 
-                          choices = levels(as.factor(data2$Country)), selected = "Afghanistan"),
-              plotlyOutput("countryA_radar")
-          ),
-          box(width = 8,
-              title = "Country B",
-              color = "teal", ribbon = FALSE, title_side = "top", collapsible = FALSE,
-              selectInput(inputId = "second_country2", label = "Select country:",
-                          choices = levels(as.factor(data2$Country)), selected = "Afghanistan"),
-              plotlyOutput("countryB_radar")
           )
         )
       ),
@@ -255,27 +237,8 @@ server <- function(input, output) {
   shape.data <- merge(country.data, shape.data, by.x=c("Country"), by.y=c("NAME") )
   world_spdf@data <- shape.data
   
-  output$ridgeplot1 <- renderPlot({
-    filtered_data <- subset(data1,
-                            Year %in% input$ridge1years)
-    ggplot(filtered_data, aes(y=as.factor(Year),
-                              x=`Life Ladder`)) +
-      geom_density_ridges(alpha=0.5) +
-      scale_y_discrete(expand = c(0.01, 0)) +  
-      scale_x_continuous(expand = c(0, 0))+
-      theme(axis.text=element_text(size=10))
-  })
   
-  output$ridgeplot2 <- renderPlot({
-    ggplot(RidgePlot_and_Chloro, aes(y=1,x=Value,fill=Factor)) +
-      geom_density_ridges(alpha=0.5) +
-      
-      scale_y_discrete(expand = c(0.01, 0)) +  
-      scale_x_continuous(expand = c(0, 0))+
-      theme(axis.text=element_text(size=10), legend.position = "bottom")
-  })
-  
-  output$ridgeplot3 <- renderPlot({
+  output$ridgeplot <- renderPlot({
     ggplot(RidgePlot_and_Chloro, aes(y=1,x=PercentValue,fill=PercentFactor)) +
       geom_density_ridges(alpha=0.5) +
       scale_y_discrete(expand = c(0.01, 0)) +  
@@ -435,23 +398,29 @@ server <- function(input, output) {
            MinMaxSS = MMScaler(SocialSupport),
            MinMaxLE = MMScaler(LifeExpectancy),
            MinMaxFreedom = MMScaler(Freedom),
-           MinMaxCorruption = MMScaler(Corruption),
+           MinMaxCorruption = 1 - MMScaler(Corruption),
            MinMaxGenerosity = MMScaler(Generosity)) 
   
-  # Comparison Tab - Country A Bar
+  # Comparison Tab - Combined Bar
+  combined_data <- reactive({
+    combined_data <- comparison_data %>% 
+      select(Country, Year, MinMaxGDP, MinMaxSS, MinMaxLE, MinMaxFreedom, MinMaxCorruption, MinMaxGenerosity) %>% 
+      filter((Country == input$first_country | Country == input$second_country) & Year == input$comparison_year) %>% 
+      gather(Category, Value, MinMaxGDP, MinMaxSS, MinMaxLE, MinMaxFreedom, MinMaxCorruption, MinMaxGenerosity)
+  })
+  
+  output$country_barchart <- renderPlotly({
+    plot_ly(combined_data(), x = ~Category, y = ~Value, color = ~Country, type = "bar", position = "dodge") 
+  })
+  
+  # Comparison Tab - Country A Radar
   countryA_data <- reactive({
     countryA_data <- comparison_data %>% 
       select(Country, Year, MinMaxGDP, MinMaxSS, MinMaxLE, MinMaxFreedom, MinMaxCorruption, MinMaxGenerosity) %>% 
       filter(Country == input$first_country & Year == input$comparison_year) %>% 
       gather(Category, Value, MinMaxGDP, MinMaxSS, MinMaxLE, MinMaxFreedom, MinMaxCorruption, MinMaxGenerosity)
   })
-  
-  output$countryA_barchart <- renderPlotly({
-    plot_ly(countryA_data(), x = ~Category, y = ~Value, type = "bar") 
-  })
-  
-  
-  # Comparison Tab - Country B Bar
+  # Comparison Tab - Country B Radar
   countryB_data <- reactive({
     countryB_data <- comparison_data %>% 
       select(Country, Year, MinMaxGDP, MinMaxSS, MinMaxLE, MinMaxFreedom, MinMaxCorruption, MinMaxGenerosity) %>% 
@@ -459,8 +428,32 @@ server <- function(input, output) {
       gather(Category, Value, MinMaxGDP, MinMaxSS, MinMaxLE, MinMaxFreedom, MinMaxCorruption, MinMaxGenerosity)
   })
   
-  output$countryB_barchart <- renderPlotly({
-    plot_ly(countryB_data(), x = ~Category, y = ~Value, type = "bar") 
+  # Combined Radar
+  output$country_radar <- renderPlotly({
+    plot_ly(
+      type = 'scatterpolar',
+      fill = 'toself'
+    ) %>%
+      add_trace(
+        data = countryA_data(),
+        r = ~Value,
+        theta = ~Category,
+        name = input$first_country
+      ) %>%
+      add_trace(
+        data = countryB_data(),
+        r = ~Value,
+        theta = ~Category,
+        name = input$second_country
+      ) %>%
+      layout(
+        polar = list(
+          radialaxis = list(
+            visible = T,
+            range = c(0,1)
+          )
+        )
+      )
   })
   
   # Comparison Tab - Country A Ridge
@@ -495,58 +488,6 @@ server <- function(input, output) {
       theme(axis.text=element_text(size=10), legend.position = "bottom")
   })
   
-  # Comparison Tab - Country A Radar
-  countryA_data <- reactive({
-    countryA_data <- comparison_data %>% 
-      select(Country, Year, MinMaxGDP, MinMaxSS, MinMaxLE, MinMaxFreedom, MinMaxCorruption, MinMaxGenerosity) %>% 
-      filter(Country == input$first_country2 & Year == input$comparison_year2) %>% 
-      gather(Category, Value, MinMaxGDP, MinMaxSS, MinMaxLE, MinMaxFreedom, MinMaxCorruption, MinMaxGenerosity)
-  })
-  
-  output$countryA_radar <- renderPlotly({
-    plot_ly(countryA_data(),
-            type = 'scatterpolar',
-            r = ~Value,
-            theta = ~Category,
-            fill = 'toself'
-    ) %>%
-      layout(
-        polar = list(
-          radialaxis = list(
-            visible = T,
-            range = c(0,1)
-          )
-        ),
-        showlegend = F
-      )
-  })
-  
-  
-  # Comparison Tab - Country B Bar
-  countryB_data <- reactive({
-    countryB_data <- comparison_data %>% 
-      select(Country, Year, MinMaxGDP, MinMaxSS, MinMaxLE, MinMaxFreedom, MinMaxCorruption, MinMaxGenerosity) %>% 
-      filter(Country == input$second_country2 & Year == input$comparison_year2) %>% 
-      gather(Category, Value, MinMaxGDP, MinMaxSS, MinMaxLE, MinMaxFreedom, MinMaxCorruption, MinMaxGenerosity)
-  })
-  
-  output$countryB_radar <- renderPlotly({
-    plot_ly(countryB_data(),
-            type = 'scatterpolar',
-            r = ~Value,
-            theta = ~Category,
-            fill = 'toself'
-    ) %>%
-      layout(
-        polar = list(
-          radialaxis = list(
-            visible = T,
-            range = c(0,1)
-          )
-        ),
-        showlegend = F
-      ) 
-  })
   
   #Country Tab
   country_data_selected <- reactive({
