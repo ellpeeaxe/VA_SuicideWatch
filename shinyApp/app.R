@@ -165,11 +165,11 @@ ui <- dashboardPage(
           selectInput(inputId = "comparison_year", label = "Select year:", 
                       choices = c(2005:2018), selected = 2018),
           div(style="display: inline-block; width: 150px; margin-left: 20px",
-            selectInput(inputId = "first_country", label = "Select country:", 
+            selectInput(inputId = "first_country", label = "Select first country:", 
                         choices = levels(as.factor(data2$Country)), selected = "Finland")
           ),
           div(style="display: inline-block; width: 150px; margin-left: 20px",
-            selectInput(inputId = "second_country", label = "Select country:",
+            selectInput(inputId = "second_country", label = "Select second country:",
                         choices = levels(as.factor(data2$Country)), selected = "Afghanistan")
           )
         ),
@@ -226,15 +226,15 @@ ui <- dashboardPage(
         fluidRow(
           box(width = 16,
               style="height:210px",
-              title = "Happiness Index 2005 - 2018",
-              color = "teal", ribbon = FALSE, title_side = "top", Collapsible = FALSE,
+              title = "Happiness Index Scores 2005 - 2018",
+              color = "teal", ribbon = FALSE, title_side = "top", collapsible = FALSE,
               plotlyOutput("happiness_timeseries"))
         ),
         fluidRow(
           box(width = 16,
               style="height:340px",
-              title = "Well-being Measures 2005 - 2018",
-              color = "teal", ribbon = FALSE, title_side = "top", Collapsible = FALSE,
+              title = "Happiness Index Components 2005 - 2018",
+              color = "teal", ribbon = FALSE, title_side = "top", collapsible = FALSE,
               plotlyOutput("measures_timeseries"))
         )
       )
@@ -275,8 +275,8 @@ server <- function(input, output) {
       geom_density_ridges(alpha=0.5) +
       scale_y_discrete(expand = c(0.01, 0)) +  
       scale_x_continuous(expand = c(0, 0))+
-      scale_fill_discrete(name = "", labels = c("Freedom", "Generosity", "Corruption","GDP","Life Expectancy","Social Support")) + 
-      theme(axis.text=element_text(size=10), legend.position = "bottom")
+      scale_fill_discrete(name = "", labels = c("Freedom", "GDP", "Generosity","Life Expectancy","Corruption","Social Support")) + 
+      theme(axis.text=element_text(size=10), axis.title.y = element_blank(), legend.position = "bottom")
   })
   
   #World Stacked Bar Chart
@@ -439,39 +439,52 @@ server <- function(input, output) {
            MinMaxCorruption = 1 - MMScaler(Corruption),
            MinMaxGenerosity = MMScaler(Generosity)) 
   
+  comparison_data_2 <- comparison_data %>%
+    mutate(`GDP` = MinMaxGDP,
+           `Social Support` = MinMaxSS,
+           `Life Expectancy` = MinMaxLE,
+           `Freedom` = MinMaxFreedom,
+           `Corruption` = MinMaxCorruption,
+           `Generosity` = MinMaxGenerosity) 
+  
   # Comparison Tab - Combined Bar
   combined_data <- reactive({
-    combined_data <- comparison_data %>% 
-      select(Country, Year, MinMaxGDP, MinMaxSS, MinMaxLE, MinMaxFreedom, MinMaxCorruption, MinMaxGenerosity) %>% 
+    combined_data <- comparison_data_2 %>% 
+      select(Country, Year, `GDP`, `Social Support`, `Life Expectancy`, `Freedom`, `Corruption`, `Generosity`) %>% 
       filter((Country == input$first_country | Country == input$second_country) & Year == input$comparison_year) %>% 
-      gather(Category, Value, MinMaxGDP, MinMaxSS, MinMaxLE, MinMaxFreedom, MinMaxCorruption, MinMaxGenerosity)
+      gather(Category, Value, `GDP`, `Social Support`, `Life Expectancy`, `Freedom`, `Corruption`, `Generosity`)
   })
   
   output$country_barchart <- renderPlotly({
-    plot_ly(combined_data(), x = ~Category, y = ~Value, color = ~Country, type = "bar", position = "dodge") 
+    plot_ly(combined_data(), x = ~Category, y = ~Value, 
+            color = ~Country, type = "bar", position = "dodge") %>% 
+      config(displayModeBar = FALSE)%>% 
+      layout(xaxis=list(fixedrange=TRUE)) %>% 
+      layout(yaxis=list(fixedrange=TRUE))
   })
   
   # Comparison Tab - Country A Radar
   countryA_data <- reactive({
-    countryA_data <- comparison_data %>% 
-      select(Country, Year, MinMaxGDP, MinMaxSS, MinMaxLE, MinMaxFreedom, MinMaxCorruption, MinMaxGenerosity) %>% 
+    countryA_data <- comparison_data_2 %>% 
+      select(Country, Year, `GDP`, `Social Support`, `Life Expectancy`, `Freedom`, `Corruption`, `Generosity`) %>% 
       filter(Country == input$first_country & Year == input$comparison_year) %>% 
-      gather(Category, Value, MinMaxGDP, MinMaxSS, MinMaxLE, MinMaxFreedom, MinMaxCorruption, MinMaxGenerosity)
+      gather(Category, Value, `GDP`, `Social Support`, `Life Expectancy`, `Freedom`, `Corruption`, `Generosity`)
   })
   
   # Comparison Tab - Country B Radar
   countryB_data <- reactive({
-    countryB_data <- comparison_data %>% 
-      select(Country, Year, MinMaxGDP, MinMaxSS, MinMaxLE, MinMaxFreedom, MinMaxCorruption, MinMaxGenerosity) %>% 
+    countryB_data <- comparison_data_2 %>% 
+      select(Country, Year, `GDP`, `Social Support`, `Life Expectancy`, `Freedom`, `Corruption`, `Generosity`) %>% 
       filter(Country == input$second_country & Year == input$comparison_year) %>% 
-      gather(Category, Value, MinMaxGDP, MinMaxSS, MinMaxLE, MinMaxFreedom, MinMaxCorruption, MinMaxGenerosity)
+      gather(Category, Value, `GDP`, `Social Support`, `Life Expectancy`, `Freedom`, `Corruption`, `Generosity`)
   })
   
   # Combined Radar
   output$country_radar <- renderPlotly({
     plot_ly(
       type = 'scatterpolar',
-      fill = 'toself'
+      fill = 'toself',
+      mode = 'markers'
     ) %>%
       add_trace(
         data = countryA_data(),
@@ -492,15 +505,18 @@ server <- function(input, output) {
             range = c(0,1)
           )
         )
-      )
+      )%>% 
+      config(displayModeBar = FALSE)%>% 
+      layout(xaxis=list(fixedrange=TRUE)) %>% 
+      layout(yaxis=list(fixedrange=TRUE))
   })
   
   # Comparison Tab - Country A Ridge
   countryAridge_data <- reactive({
-    countryAridge_data <- comparison_data %>% 
-      select(Country, Year, MinMaxGDP, MinMaxSS, MinMaxLE, MinMaxFreedom, MinMaxCorruption, MinMaxGenerosity) %>% 
+    countryAridge_data <- comparison_data_2 %>% 
+      select(Country, Year, `GDP`, `Social Support`, `Life Expectancy`, `Freedom`, `Corruption`, `Generosity`) %>% 
       filter(Country == input$first_country) %>% 
-      gather(key = "Category", value = "Value", MinMaxGDP, MinMaxSS, MinMaxLE, MinMaxFreedom, MinMaxCorruption, MinMaxGenerosity)
+      gather(key = "Category", value = "Value", `GDP`, `Social Support`, `Life Expectancy`, `Freedom`, `Corruption`, `Generosity`)
   })
   
   output$countryAridge <- renderPlot({
@@ -508,17 +524,16 @@ server <- function(input, output) {
       geom_density_ridges(alpha=0.5) +
       scale_y_discrete(expand = c(0.01, 0)) +  
       scale_x_continuous(expand = c(0, 0))+
-      scale_fill_discrete(name = "", labels = c("Corruption", "Freedom", "GDP","Generosity","Life Expectancy","Social Support")) + 
-      theme(axis.text=element_text(size=10,), legend.position = "bottom") +
-      labs(title = paste(input$first_country, "Component Distribution"))
+      theme(axis.text=element_text(size=10,), axis.title.y = element_blank(), legend.position = "bottom") +
+      labs(title = input$first_country)
   })
   
   # Comparison Tab - Country B Ridge
   countryBridge_data <- reactive({
-    countryBridge_data <- comparison_data %>% 
-      select(Country, Year, MinMaxGDP, MinMaxSS, MinMaxLE, MinMaxFreedom, MinMaxCorruption, MinMaxGenerosity) %>% 
+    countryBridge_data <- comparison_data_2 %>% 
+      select(Country, Year, `GDP`, `Social Support`, `Life Expectancy`, `Freedom`, `Corruption`, `Generosity`) %>% 
       filter(Country == input$second_country) %>% 
-      gather(key = "Category", value = "Value", MinMaxGDP, MinMaxSS, MinMaxLE, MinMaxFreedom, MinMaxCorruption, MinMaxGenerosity)
+      gather(key = "Category", value = "Value", `GDP`, `Social Support`, `Life Expectancy`, `Freedom`, `Corruption`, `Generosity`)
   })
   
   output$countryBridge <- renderPlot({
@@ -526,9 +541,8 @@ server <- function(input, output) {
       geom_density_ridges(alpha=0.5) +
       scale_y_discrete(expand = c(0.01, 0)) +  
       scale_x_continuous(expand = c(0, 0))+
-      scale_fill_discrete(name = "", labels = c("Corruption", "Freedom", "GDP","Generosity","Life Expectancy","Social Support")) + 
-      theme(axis.text=element_text(size=10), legend.position = "bottom") +
-      labs(title = paste(input$second_country, "Component Distribution"))
+      theme(axis.text=element_text(size=10), axis.title.y = element_blank(), legend.position = "bottom") +
+      labs(title = input$second_country)
   })
   
   
@@ -550,12 +564,13 @@ server <- function(input, output) {
   
   output$happiness_timeseries <- renderPlotly({
     plot_ly(country_data_selected(), x = ~Year, y = ~HappinessIndex, mode = 'lines+markers') %>%
-      add_trace(y = ~HappinessIndex, name = "Happiness Index", mode = 'lines+markers')%>%
-      add_trace(y = ~average_happiness, name = "Average Happiness Index", mode = 'lines', line = list(color = 'rgb(169,169, 169)', dash = 'dot'))%>% 
+      add_trace(y = ~HappinessIndex, name = paste(input$country_tab_selected,"Happiness Index Score"), mode = 'lines+markers')%>%
+      add_trace(y = ~average_happiness, name = "Average Happiness Index Score", mode = 'lines', line = list(color = 'rgb(169,169, 169)', dash = 'dot'))%>% 
       layout(
         height = 200,
         yaxis = list(title = "Happiness Index"
-        ))
+        ))%>% 
+      config(displayModeBar = FALSE)%>% layout(xaxis=list(fixedrange=TRUE)) %>% layout(yaxis=list(fixedrange=TRUE))
   })
   
   output$measures_timeseries <- renderPlotly({
@@ -564,12 +579,15 @@ server <- function(input, output) {
       add_trace(y = ~MinMaxSS, name = "Social Support", mode = 'lines+markers')%>%
       add_trace(y = ~MinMaxLE, name = "Life Expectancy", mode = 'lines+markers')%>%
       add_trace(y = ~MinMaxFreedom, name = "Freedom to Make Life Choices", mode = 'lines+markers')%>%
-      add_trace(y = ~MinMaxCorruption, name = "Perceptions of Corruptions", mode = 'lines+markers')%>%
+      add_trace(y = ~MinMaxCorruption, name = "Perception of Corruption", mode = 'lines+markers')%>%
       add_trace(y = ~MinMaxGenerosity, name = "Generosity", mode = 'lines+markers') %>%
       layout(
         height = 350,
         yaxis = list(title = "Normalized Value"
-        ))
+        )) %>% 
+      config(displayModeBar = FALSE)%>% 
+      layout(xaxis=list(fixedrange=TRUE)) %>% 
+      layout(yaxis=list(fixedrange=TRUE))
   })
   
 }
