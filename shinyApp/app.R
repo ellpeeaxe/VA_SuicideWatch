@@ -23,10 +23,11 @@ data2 <- read_excel("data/Happiness Index.xlsx", sheet = 2)
 HWlogo <- base64enc::dataURI(file="img/HW_Logo.png", mime="image/png")
 
 world_spdf <- readOGR( 
-  dsn= paste0(getwd(),"/data/shape_file/") , 
+  dsn= paste0(getwd(),"/data/shape_file"), 
   layer="TM_WORLD_BORDERS_SIMPL-0.3",
   verbose=FALSE
 )
+
 data1 <- merge(
   data1 %>%
     group_by(Year) %>%
