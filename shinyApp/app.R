@@ -456,15 +456,25 @@ server <- function(input, output) {
   
   # Scatter Plot Chart 
   scatterplot_data <- reactive({
-    scatterplot_data <- data1 %>%
+    dataset1 <- data1 %>%
       select("Country name", Year, "Life Ladder") %>%
       spread(Year, "Life Ladder") %>% 
-      drop_na(input$start_year, input$end_year) %>% 
+      drop_na(input$start_year) %>% 
       rename("country"="Country name",
-             "year1"=paste(input$start_year),
-             "year2"=paste(input$end_year)) %>%
-      select(country,year1,year2) %>%
+             "year1" = input$start_year) %>%
+      select(country, year1)
+    
+    dataset2 <- data1 %>%
+      select("Country name", Year, "Life Ladder") %>%
+      spread(Year, "Life Ladder") %>% 
+      drop_na(input$end_year) %>% 
+      rename("country"="Country name",
+             "year2" = input$end_year) %>%
+      select(country, year2)
+    
+    scatterplot_data <- merge(dataset1[1:2], dataset2[1:2], dataset1.country = dataset2.country) %>%
       mutate(change = round((year2 - year1)/year1, digits = 2))
+    
   })
   
   geo <- list(
