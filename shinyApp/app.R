@@ -78,10 +78,10 @@ Multi-line Plot - Visualises the changes in country's component scores over time
             width = 16,
             align = "center",
             box(
-              div(style="padding: 60px; height: 700px",
+              div(style="padding: 60px; height: 750px",
                 list(img(src=HWlogo,height='200px')),
                 fluidRow(
-                    div(style="font-size: 20px; margin-bottom: 25px; margin-top: 50px",
+                    div(style="font-size: 20px; margin-bottom: 35px; margin-top: 50px",
                         HTML("<b><u>INTRODUCTION</u></b><br><br>
                              Traditionally, a country’s well-being has been measured on economic variables like GDP or unemployment rate. However, no institution, nation or group of people can really be properly understood without also factoring in a number of other elements.")
                     ),
