@@ -362,31 +362,45 @@ server <- function(input, output) {
     sorted_data <- stackedBC_data[order(stackedBC_data[[input$stackedBC_sortby]]),] 
   })
   
-  output$barchart <-renderPlotly({
+  output$barchart <- renderPlotly({
     #Plotting Stacked bar chart
     p <- plot_ly(sorted_data(), type='bar', height = 670, width=600)
 
     for(col in headers()) {
       if(col == "GDP"){
-        p <- add_trace(p,x = ~GDP, y=~Country,  name = 'GDP', marker= list(color='rgba(109, 166, 167, 1)')) 
+        p <- add_trace(p,x = ~GDP, y=~Country,  name = 'GDP', marker= list(color='rgba(109, 166, 167, 1)'),
+                       text = ~HappinessScore,
+                       hovertemplate = '<b>Country:</b> %{y}<br><b>Score:</b> %{x:.3f}<br><b>Happiness Index:</b> %{text:.3f}<br>') 
       }else if(col == "SocialSupport"){
         p <- add_trace(p,x = ~SocialSupport,
-                       y=~Country, type='bar', name = 'Social Support', marker= list(color='rgba(212, 154, 203, 1)'))
+                       y=~Country, type='bar', name = 'Social Support', marker= list(color='rgba(212, 154, 203, 1)'),
+                       text = ~HappinessScore,
+                       hovertemplate = '<b>Country:</b> %{y}<br><b>Score:</b> %{x:.3f}<br><b>Happiness Index:</b> %{text:.3f}<br>')
       }else if(col == "LifeExpectancy"){
         p <- add_trace(p,x = ~LifeExpectancy, 
-                       y=~Country, type='bar', name = 'Life Expectancy', marker= list(color='rgba(173, 201, 249, 1)'))
+                       y=~Country, type='bar', name = 'Life Expectancy', marker= list(color='rgba(173, 201, 249, 1)'),
+                       text = ~HappinessScore,
+                       hovertemplate = '<b>Country:</b> %{y}<br><b>Score:</b> %{x:.3f}<br><b>Happiness Index:</b> %{text:.3f}<br>')
       }else if(col == "Freedom"){
         p <- add_trace(p,x = ~Freedom, 
-                       y=~Country, type='bar', name = 'Freedom', marker= list(color='rgba(255, 188, 183, 1)'))
+                       y=~Country, type='bar', name = 'Freedom', marker= list(color='rgba(255, 188, 183, 1)'),
+                       text = ~HappinessScore,
+                       hovertemplate = '<b>Country:</b> %{y}<br><b>Score:</b> %{x:.3f}<br><b>Happiness Index:</b> %{text:.3f}<br>')
       }else if(col == "Generosity"){
         p <- add_trace(p,x = ~Generosity, 
-                       y=~Country, type='bar', name = 'Generosity', marker= list(color='rgba(213, 200, 140, 1)'))
+                       y=~Country, type='bar', name = 'Generosity', marker= list(color='rgba(213, 200, 140, 1)'),
+                       text = ~HappinessScore,
+                       hovertemplate = '<b>Country:</b> %{y}<br><b>Score:</b> %{x:.3f}<br><b>Happiness Index:</b> %{text:.3f}<br>')
       }else if(col == "PerceptionsOfCorruption"){
         p <- add_trace(p,x = ~PerceptionsOfCorruption, 
-                       y=~Country, name = 'Corruption', marker= list(color='rgba(130, 191, 141, 1)'))
+                       y=~Country, name = 'Corruption', marker= list(color='rgba(130, 191, 141, 1)'),
+                       text = ~HappinessScore,
+                       hovertemplate = '<b>Country:</b> %{y}<br><b>Score:</b> %{x:.3f}<br><b>Happiness Index:</b> %{text:.3f}<br>')
       }else if(col == "Dystopia"){
         p <- add_trace(p,x = ~Dystopia, 
-                       y=~Country, name = 'Dystopia', marker= list(color='rgba(174, 176, 183, 1)'))
+                       y=~Country, name = 'Dystopia', marker= list(color='rgba(174, 176, 183, 1)'),
+                       text = ~HappinessScore,
+                       hovertemplate = '<b>Country:</b> %{y}<br><b>Score:</b> %{x:.3f}<br><b>Happiness Index:</b> %{text:.3f}<br>')
       }
     }
     
