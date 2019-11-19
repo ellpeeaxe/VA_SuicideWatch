@@ -9,7 +9,7 @@
 
 packages = c('devtools', 'tidyverse', 'ggridges','readxl','dplyr',
              'plotly','shiny','shiny.semantic','semantic.dashboard','ggplot2', 
-             'DT', 'scales', 'rgdal', 'leaflet', 'RColorBrewer','png','base64enc')
+             'DT', 'scales', 'rgdal', 'leaflet', 'RColorBrewer','png','base64enc', 'bsplus')
 
 for (p in packages){
   if(!require(p, character.only = T)){
@@ -40,9 +40,32 @@ ui <- dashboardPage(
   dashboardSidebar(
     sidebarMenu(
       menuItem(tabName = "home", "Home"),
-      menuItem(tabName = "overview", "Global Overview"),
-      menuItem(tabName = "comparison", "Country Comparison"),
-      menuItem(tabName = "country", "Country Time-Series")
+      menuItem(tabName = "overview", "Global Overview") %>%
+        bs_embed_tooltip(HTML("A global overview of the Happiness Index Scores and the component distributions
+
+Charts available: 
+Chloropleth Map - Visualise Happiness Index Score across countries
+Stacked Bar - Rank countries by individual components
+Scatterplot - Compare changes between Happiness Index Scores over 2 given years
+Ridge Plot  - Shows the global distribution of each component"), 
+                         placement = 'right'),
+      
+      menuItem(tabName = "comparison", "Country Comparison") %>%
+        bs_embed_tooltip(HTML("Compare two countries' Happiness Index Scores and its components in any given year
+
+Charts available: 
+Grouped Bar Chart - Compare the components between each countries 
+Radar Chart - Compare the components between each countries
+Ridge Plot  - Shows the countries' distribution of each component over the years"), 
+                         placement = 'right'),
+      
+      menuItem(tabName = "country", "Country Time-Series") %>%
+        bs_embed_tooltip(HTML("Compare the Happiness Index Score and its components over time
+
+Charts available: 
+Line Chart - Compare Happiness Index Score over time to the average Score
+Multi-line Plot - Visualises the changes in country's component scores over time"), 
+                         placement = 'right')
     )
   ),
   dashboardBody(
@@ -56,14 +79,37 @@ ui <- dashboardPage(
             align = "center",
             box(
               div(style="padding: 60px; height: 700px",
-                list(img(src=HWlogo,height='300px')),
+                list(img(src=HWlogo,height='200px')),
                 fluidRow(
-                  div(style="font-size: 25px; margin-bottom: 25px; margin-top: 50px",
-                    "Traditionally, a country’s well-being has been measured on economic variables like GDP or unemployment rate. However, no institution, nation or group of people can really be properly understood without also factoring in a number of other elements."
-                  ),
-                  div(style="font-size: 25px",
-                    "One of these key elements is happiness. What contributes to a country’s happiness? Why are some countries happier than others? Are there any trends or patterns we can discern from the available data? With reference to the World Happiness Report, we attempt to visualize the factors that contribute to a country’s happiness on a global scale."
-                  )
+                    div(style="font-size: 20px; margin-bottom: 25px; margin-top: 50px",
+                        HTML("<b><u>INTRODUCTION</u></b><br><br>
+                             Traditionally, a country’s well-being has been measured on economic variables like GDP or unemployment rate. However, no institution, nation or group of people can really be properly understood without also factoring in a number of other elements.")
+                    ),
+                    div(style="font-size: 20px",
+                        "One of these key elements is happiness. What contributes to a country’s happiness? Why are some countries happier than others? Are there any trends or patterns we can discern from the available data? With reference to the World Happiness Report, we attempt to visualize the factors that contribute to a country’s happiness on a global scale."
+                    ),
+                    div(style="font-size: 20px; margin-top: 25px",
+                        HTML(paste("<table style='width:100%'>
+                                    <tr>
+                                      <th><u>OBJECTIVES</u><br></th>
+                                    </tr>
+                                    <tr>
+                                      <td>&emsp;</td>
+                                    </tr>
+                                    <tr>
+                                      <td>&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;1.&emsp;&emsp; Identify regions or countries with the highest happiness scores</td>
+                                    </tr>
+                                    <tr>
+                                      <td>&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;2.&emsp;&emsp; Visualise the happiness scores over time</td>
+                                    </tr>
+                                    <tr>
+                                      <td>&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;3.&emsp;&emsp; Explore the factors contributing to happiness score</td>
+                                    </tr>
+                                    <tr>
+                                      <td>&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;4.&emsp;&emsp; Comparison of happiness scores and its factors across countries</td>
+                                    </tr>
+                                  </table>"))
+                    )
                 )
               )
             )
@@ -319,8 +365,7 @@ server <- function(input, output) {
   output$barchart <-renderPlotly({
     #Plotting Stacked bar chart
     p <- plot_ly(sorted_data(), type='bar', height = 670, width=600)
-    print(headers())
-    
+
     for(col in headers()) {
       if(col == "GDP"){
         p <- add_trace(p,x = ~GDP, y=~Country,  name = 'GDP', marker= list(color='rgba(109, 166, 167, 1)')) 
