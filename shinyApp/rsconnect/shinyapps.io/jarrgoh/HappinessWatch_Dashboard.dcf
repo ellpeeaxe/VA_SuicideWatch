@@ -1,0 +1,12 @@
+name: HappinessWatch_Dashboard
+title: HappinessWatch_Dashboard
+username:
+account: jarrgoh
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 1493478
+bundleId: 2603235
+url: https://jarrgoh.shinyapps.io/HappinessWatch_Dashboard/
+when: 1574241882.59265
+asMultiple: FALSE
+asStatic: FALSE
