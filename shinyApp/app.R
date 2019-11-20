@@ -311,11 +311,15 @@ server <- function(input, output) {
     gather( key = "PercentFactor", value = "PercentValue", `GDP_Percent`:`PerceptionsOfCorruption_Percent`, na.rm = FALSE, convert = FALSE, factor_key = FALSE)
   
   data2_sorted <- RidgePlot_and_Chloro[order(RidgePlot_and_Chloro$"HappinessScore"),]
-  shape.data <- world_spdf@data
-  country.data <- select(RidgePlot_and_Chloro, Country, HappinessScore)
-  shape.data <- merge(country.data, shape.data, by.x=c("Country"), by.y=c("NAME") )
-  world_spdf@data <- shape.data
   
+  shape.data <- world_spdf@data
+  shape.data$id  <- as.numeric(1:nrow(shape.data))
+  country.data <- select(data2, Country, `Happiness score`)
+  names(shape.data)[names(shape.data) == "NAME"] <- "Country"
+  names(country.data)[names(country.data) == "Happiness score"] <- "HappinessScore"
+  new.shape.data  <- merge(shape.data,country.data, by = "Country", all.x = TRUE)
+  new.shape.data <- new.shape.data[order(new.shape.data$id,decreasing = FALSE),]
+  world_spdf@data <- new.shape.data
   
   output$ridgeplot <- renderPlot({
     ggplot(RidgePlot_and_Chloro, aes(y=1,x=PercentValue,fill=PercentFactor)) +
