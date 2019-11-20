@@ -463,7 +463,6 @@ server <- function(input, output) {
     dataset1 <- data1 %>%
       select("Country name", Year, "Life Ladder") %>%
       spread(Year, "Life Ladder") %>% 
-      drop_na(input$start_year) %>% 
       rename("country"="Country name",
              "year1" = input$start_year) %>%
       select(country, year1)
@@ -471,13 +470,13 @@ server <- function(input, output) {
     dataset2 <- data1 %>%
       select("Country name", Year, "Life Ladder") %>%
       spread(Year, "Life Ladder") %>% 
-      drop_na(input$end_year) %>% 
       rename("country"="Country name",
              "year2" = input$end_year) %>%
       select(country, year2)
     
-    scatterplot_data <- merge(dataset1[1:2], dataset2[1:2], dataset1.country = dataset2.country) %>%
-      mutate(change = round((year2 - year1)/year1, digits = 2))
+    scatterplot_data <- merge(dataset1, dataset2, dataset1.country = dataset2.country) %>%
+      mutate(change = round((year2 - year1)/year1, digits = 2)*100) %>%
+      drop_na(year1, year2)
     
   })
   
@@ -489,7 +488,7 @@ server <- function(input, output) {
   
   output$scatterplot <- renderPlotly({
     plot_ly(scatterplot_data(), name=~country, x = ~year2, y = ~year1, 
-            type = 'scatter', mode = 'markers', text = ~paste("Country :", country, "<br>Change: ", change),
+            type = 'scatter', mode = 'markers', text = ~paste("Country :", country, "<br>Change: ", change, "%"),
             color= ~change, colors = c('#F96997','#2EB49E'))%>%
       layout(xaxis = list(title = input$end_year), yaxis = list(title = input$start_year), showlegend = FALSE,geo = geo, paper_bgcolor='transparent') 
   })
