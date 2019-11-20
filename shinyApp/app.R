@@ -7,16 +7,34 @@
 #    http://shiny.rstudio.com/
 #
 
-packages = c('devtools', 'tidyverse', 'ggridges','readxl','dplyr',
-             'plotly','shiny','shiny.semantic','semantic.dashboard','ggplot2', 
-             'DT', 'scales', 'rgdal', 'leaflet', 'RColorBrewer','png','base64enc', 'bsplus')
+# packages = c('tidyverse', 'ggridges','readxl','dplyr',
+#              'plotly','shiny','shiny.semantic','semantic.dashboard','ggplot2',
+#              'DT', 'scales', 'rgdal', 'leaflet', 'RColorBrewer','png','base64enc', 'bsplus')
 
-for (p in packages){
-  if(!require(p, character.only = T)){
-    install.packages(p)
-  }
-  library(p,character.only = T)
-} 
+# for (p in packages){
+  # if(!require(p, character.only = T)){
+  #   install.packages(p)
+  # }
+#   library(p,character.only = T)
+# }
+
+library(tidyverse)
+library(ggridges)
+library(readxl)
+library(plotly)
+library(shiny)
+library(shiny.semantic)
+library(semantic.dashboard)
+library(ggplot2)
+library(DT)
+library(scales)
+library(rgdal)
+library(leaflet)
+library(png)
+library(RColorBrewer)
+library(base64enc)
+library(bsplus)
+
 
 data1 <- read_excel("data/Happiness Index.xlsx", sheet = 1)
 data2 <- read_excel("data/Happiness Index.xlsx", sheet = 2)
