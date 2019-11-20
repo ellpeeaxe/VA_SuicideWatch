@@ -50,21 +50,20 @@ Scatterplot - Compare changes between Happiness Index Scores over 2 given years
 Ridge Plot  - Shows the global distribution of each component"), 
                          placement = 'right'),
       
-      menuItem(tabName = "comparison", "Country Comparison") %>%
+      menuItem(tabName = "country", "Country View") %>%
+        bs_embed_tooltip(HTML("Compare the Happiness Index Score and its components over time
+
+Charts available: 
+Line Chart - Compare Happiness Index Score over time to the average Score
+Multi-line Plot - Visualises the changes in country's component scores over time"), 
+                         placement = 'right'),
+      menuItem(tabName = "comparison", "Compare Countries") %>%
         bs_embed_tooltip(HTML("Compare two countries' Happiness Index Scores and its components in any given year
 
 Charts available: 
 Grouped Bar Chart - Compare the components between each countries 
 Radar Chart - Compare the components between each countries
 Ridge Plot  - Shows the countries' distribution of each component over the years"), 
-                         placement = 'right'),
-      
-      menuItem(tabName = "country", "Country Time-Series") %>%
-        bs_embed_tooltip(HTML("Compare the Happiness Index Score and its components over time
-
-Charts available: 
-Line Chart - Compare Happiness Index Score over time to the average Score
-Multi-line Plot - Visualises the changes in country's component scores over time"), 
                          placement = 'right')
     )
   ),
