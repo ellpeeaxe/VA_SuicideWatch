@@ -228,13 +228,19 @@ Ridge Plot  - Shows the countries' distribution of each component over the years
         fluidRow(
           selectInput(inputId = "comparison_year", label = "Select year:", 
                       choices = c(2005:2018), selected = 2018),
-          div(style="display: inline-block; width: 150px; margin-left: 20px",
+          div(style="display: inline-block; width: 150px; margin-left: 70px",
             selectInput(inputId = "first_country", label = "Select first country:", 
                         choices = levels(as.factor(data2$Country)), selected = "Finland")
           ),
-          div(style="display: inline-block; width: 150px; margin-left: 20px",
+          div(style="display: inline-block; width: 175px; margin-left: 20px",
+              valueBoxOutput("countryA", width = 8)
+          ),
+          div(style="display: inline-block; width: 150px; margin-left: 50px",
             selectInput(inputId = "second_country", label = "Select second country:",
                         choices = levels(as.factor(data2$Country)), selected = "Afghanistan")
+          ),
+          div(style="display: inline-block; width: 175px; margin-left: 20px",
+              valueBoxOutput("countryB", width = 8)
           )
         ),
         fluidRow(
@@ -269,13 +275,13 @@ Ridge Plot  - Shows the countries' distribution of each component over the years
           #First Country 
           box(width = 8,
               style= "height: 250px",
-              title = "First Country",
+              title = "First Country Component Distributions",
               color = "teal", ribbon = FALSE, title_side = "top", collapsible = FALSE,
               plotOutput("countryAridge", height = 240)
           ),
           box(width = 8,
               style= "height: 250px",
-              title = "Second Country",
+              title = "Second Country Component Distributions",
               color = "teal", ribbon = FALSE, title_side = "top", collapsible = FALSE,
               plotOutput("countryBridge", height = 240)
           )
@@ -442,7 +448,7 @@ server <- function(input, output) {
   
   #new choropleth
   # Create a color palette with handmade bins.
-  mybins <- c(0,2,4,6,8)
+  mybins <- c(0,1,2,3,4,5,6,7,8)
   mypalette <- colorBin( palette="PuBuGn", domain=world_spdf@data$HappinessScore, na.color="white", bins=mybins)
   
   # Prepare the text for tooltips:
@@ -553,20 +559,48 @@ server <- function(input, output) {
       layout(yaxis=list(fixedrange=TRUE))
   })
   
+  
   # Comparison Tab - Country A Radar
   countryA_data <- reactive({
     countryA_data <- comparison_data_2 %>% 
-      select(Country, Year, `GDP`, `Social Support`, `Life Expectancy`, `Freedom`, `Corruption`, `Generosity`) %>% 
+      select(Country, Year, `HappinessIndex`,`GDP`, `Social Support`, `Life Expectancy`, `Freedom`, `Corruption`, `Generosity`) %>% 
       filter(Country == input$first_country & Year == input$comparison_year) %>% 
       gather(Category, Value, `GDP`, `Social Support`, `Life Expectancy`, `Freedom`, `Corruption`, `Generosity`)
   })
   
+  
   # Comparison Tab - Country B Radar
   countryB_data <- reactive({
     countryB_data <- comparison_data_2 %>% 
-      select(Country, Year, `GDP`, `Social Support`, `Life Expectancy`, `Freedom`, `Corruption`, `Generosity`) %>% 
+      select(Country, Year, `HappinessIndex`,`GDP`, `Social Support`, `Life Expectancy`, `Freedom`, `Corruption`, `Generosity`) %>% 
       filter(Country == input$second_country & Year == input$comparison_year) %>% 
-      gather(Category, Value, `GDP`, `Social Support`, `Life Expectancy`, `Freedom`, `Corruption`, `Generosity`)
+      gather(Category, Value,`GDP`, `Social Support`, `Life Expectancy`, `Freedom`, `Corruption`, `Generosity`)
+  })
+  
+  countryA_score <- reactive({
+    countryA_score <- signif(mean(countryA_data()$HappinessIndex),3)
+  })
+  
+  countryB_score <- reactive({
+    countryB_score <- signif(mean(countryB_data()$HappinessIndex),3)
+  })
+  
+  output$countryA <- renderValueBox({
+    valueBox(
+      value = countryA_score(),
+      subtitle = "Happiness Score",
+      color = "teal",
+      size = "small"
+    )
+  })
+  
+  output$countryB <- renderValueBox({
+    valueBox(
+      value = countryB_score(),
+      subtitle = "Happiness Score",
+      color = "teal",
+      size = "small"
+    )
   })
   
   # Combined Radar
@@ -600,6 +634,7 @@ server <- function(input, output) {
       layout(xaxis=list(fixedrange=TRUE)) %>% 
       layout(yaxis=list(fixedrange=TRUE))
   })
+  
   
   # Comparison Tab - Country A Ridge
   countryAridge_data <- reactive({
