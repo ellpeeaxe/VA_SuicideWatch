@@ -35,7 +35,6 @@ library(RColorBrewer)
 library(base64enc)
 library(bsplus)
 
-
 data1 <- read_excel("data/Happiness Index.xlsx", sheet = 1)
 data2 <- read_excel("data/Happiness Index.xlsx", sheet = 2)
 HWlogo <- base64enc::dataURI(file="img/HW_Logo.png", mime="image/png")
@@ -138,9 +137,9 @@ Ridge Plot  - Shows the countries' distribution of each component over the years
         fluidRow(
           column(width = 9,
                  box(
-                     style="height:750px",
+                   style="height:750px",
                    title = "World Happiness Index Rankings",
-                   color = "teal", ribbon = FALSE, title_side = "top", collapsible = FALSE,
+                   color = "black", ribbon = FALSE, title_side = "top", collapsible = FALSE,
                    fluidRow(
                      div(style="display: inline-block; width: 170px",
                        selectInput(
@@ -162,7 +161,7 @@ Ridge Plot  - Shows the countries' distribution of each component over the years
                                                    "Freedom", "Generosity", 
                                                    "Corruption" = "PerceptionsOfCorruption", 
                                                    "Dystopia"),
-                                       selected = 2018
+                                       selected = 'HappinessScore'
                            )
                          ),
                          conditionalPanel(
@@ -187,7 +186,7 @@ Ridge Plot  - Shows the countries' distribution of each component over the years
                      conditionalPanel(
                        condition = "input.stackedAndSlopeToggle == 'barchart'",
                        tags$hr(),
-                       color = "teal", ribbon = FALSE, title_side = "top", collapsible = FALSE,
+                       color = "black", ribbon = FALSE, title_side = "top", collapsible = FALSE,
                        plotlyOutput("barchart")
                        
                      ),
@@ -207,7 +206,7 @@ Ridge Plot  - Shows the countries' distribution of each component over the years
                    box(
                        style= "height: 400px",
                        title = "World Happiness Index 2019 Choropleth Plot",
-                       color = "teal", ribbon = FALSE, title_side = "top", collapsible = FALSE,
+                       color = "black", ribbon = FALSE, title_side = "top", collapsible = FALSE,
                            leafletOutput("choroplethplot")
                        
                    ),
@@ -215,7 +214,7 @@ Ridge Plot  - Shows the countries' distribution of each component over the years
                      box(
                          style= "height: 275px",
                          title = "World Happiness Index 2019 Component Distribution",
-                         color = "teal", ribbon = FALSE, title_side = "top", collapsible = FALSE,
+                         color = "black", ribbon = FALSE, title_side = "top", collapsible = FALSE,
                          plotOutput("ridgeplot", height = 270)
                      )
                    )
@@ -247,7 +246,7 @@ Ridge Plot  - Shows the countries' distribution of each component over the years
           box(width = 16,
               style= "height: 350px",
               title = "Happiness Index Component Breakdown",
-              color = "teal", ribbon = FALSE, title_side = "top", collapsible = FALSE,
+              color = "black", ribbon = FALSE, title_side = "top", collapsible = FALSE,
               div(style="display: inline-block; width: 150px",
                   selectInput(
                     inputId = "barAndRadarToggle", 
@@ -260,7 +259,7 @@ Ridge Plot  - Shows the countries' distribution of each component over the years
               conditionalPanel(
                 condition = "input.barAndRadarToggle == 'groupedbar'",
                 tags$hr(),
-                color = "teal", ribbon = FALSE, title_side = "top", collapsible = FALSE,
+                color = "black", ribbon = FALSE, title_side = "top", collapsible = FALSE,
                 plotlyOutput("country_barchart", height = 250)
               ),
               
@@ -276,13 +275,13 @@ Ridge Plot  - Shows the countries' distribution of each component over the years
           box(width = 8,
               style= "height: 250px",
               title = "First Country Component Distributions",
-              color = "teal", ribbon = FALSE, title_side = "top", collapsible = FALSE,
+              color = "black", ribbon = FALSE, title_side = "top", collapsible = FALSE,
               plotOutput("countryAridge", height = 240)
           ),
           box(width = 8,
               style= "height: 250px",
               title = "Second Country Component Distributions",
-              color = "teal", ribbon = FALSE, title_side = "top", collapsible = FALSE,
+              color = "black", ribbon = FALSE, title_side = "top", collapsible = FALSE,
               plotOutput("countryBridge", height = 240)
           )
         )
@@ -297,14 +296,14 @@ Ridge Plot  - Shows the countries' distribution of each component over the years
           box(width = 16,
               style="height:210px",
               title = "Happiness Index Scores 2005 - 2018",
-              color = "teal", ribbon = FALSE, title_side = "top", collapsible = FALSE,
+              color = "black", ribbon = FALSE, title_side = "top", collapsible = FALSE,
               plotlyOutput("happiness_timeseries"))
         ),
         fluidRow(
           box(width = 16,
               style="height:340px",
               title = "Happiness Index Components 2005 - 2018",
-              color = "teal", ribbon = FALSE, title_side = "top", collapsible = FALSE,
+              color = "black", ribbon = FALSE, title_side = "top", collapsible = FALSE,
               plotlyOutput("measures_timeseries"))
         )
       )
@@ -314,7 +313,7 @@ Ridge Plot  - Shows the countries' distribution of each component over the years
 
 
 # Define server logic 
-server <- function(input, output) {
+server <- function(input, output, session) {
   
   RidgePlot_and_Chloro <- data2 %>% 
     rename("GDP"="Explained by: GDP per capita",
@@ -391,7 +390,7 @@ server <- function(input, output) {
   
   output$barchart <- renderPlotly({
     #Plotting Stacked bar chart
-    p <- plot_ly(sorted_data(), type='bar', height = 670, width=600)
+    p <- plot_ly(sorted_data(), type='bar', source='stacked', height = 670, width=600)
 
     for(col in headers()) {
       if(col == "GDP"){
@@ -512,8 +511,32 @@ server <- function(input, output) {
   output$scatterplot <- renderPlotly({
     plot_ly(scatterplot_data(), name=~country, x = ~year2, y = ~year1, 
             type = 'scatter', mode = 'markers', text = ~paste("Country :", country, "<br>Change: ", change, "%"),
-            color= ~change, colors = c('#F96997','#2EB49E'))%>%
+            source = 'scatter', color= ~change, colors = c('#F96997','#2EB49E'))%>%
       layout(xaxis = list(title = input$end_year), yaxis = list(title = input$start_year), showlegend = FALSE,geo = geo, paper_bgcolor='transparent') 
+  })
+  
+  #Coupled Events - Linking Stacked Bar Chart and Scatterplot with Choropleth Map. 
+  observe({
+    event_data <- event_data('plotly_hover', source = 'scatter')
+    
+    if(!is.null(event_data)){
+      row_data <- scatterplot_data()[event_data$curveNumber+1,]
+      country_data <- world_spdf@data %>%
+        filter(Country == row_data$country)
+      leafletProxy("choroplethplot", session) %>%
+        flyTo(lng=country_data$LON, lat=country_data$LAT, 4)
+    }
+  })
+  
+  observe({
+    event_data <- event_data('plotly_hover', source = 'stacked')
+  
+    if(!is.null(event_data)){
+      country_data <- world_spdf@data %>%
+        filter(Country == event_data$y)
+      leafletProxy("choroplethplot", session) %>%
+        flyTo(lng=country_data$LON, lat=country_data$LAT, 4)
+    }
   })
   
   # MinMax Scaler
@@ -589,7 +612,7 @@ server <- function(input, output) {
     valueBox(
       value = countryA_score(),
       subtitle = "Happiness Score",
-      color = "teal",
+      color = "black",
       size = "small"
     )
   })
@@ -598,7 +621,7 @@ server <- function(input, output) {
     valueBox(
       value = countryB_score(),
       subtitle = "Happiness Score",
-      color = "teal",
+      color = "black",
       size = "small"
     )
   })
