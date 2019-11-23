@@ -447,8 +447,8 @@ server <- function(input, output, session) {
   
   #new choropleth
   # Create a color palette with handmade bins.
-  mybins <- c(0,1,2,3,4,5,6,7,8)
-  mypalette <- colorBin( palette="PuBuGn", domain=world_spdf@data$HappinessScore, na.color="white", bins=mybins)
+  mybins <- c(0,3,4,5,6,7,8)
+  mypalette <- colorBin(palette="PuBuGn", domain=world_spdf@data$HappinessScore, na.color="lightgrey", bins=mybins)
   
   # Prepare the text for tooltips:
   mytext <- paste(
@@ -460,22 +460,27 @@ server <- function(input, output, session) {
   # Final Map
   output$choroplethplot <- renderLeaflet({
     leaflet(world_spdf) %>% 
-      addTiles()  %>% 
+      addMapPane(name = "maplabels", zIndex = 420) %>% 
+      addMapPane(name = "polygons", zIndex = 410) %>% 
+      addTiles() %>%
+      addProviderTiles("CartoDB.PositronOnlyLabels", 
+                       options = leafletOptions(pane = "maplabels")) %>%
       setView( lat=10, lng=0 , zoom = 0.5) %>%
       addPolygons( 
         fillColor = ~mypalette(HappinessScore), 
         stroke=TRUE, 
         fillOpacity = 0.9, 
-        color="white", 
+        color="grey", 
         weight=0.3,
         label = mytext,
         labelOptions = labelOptions( 
           style = list("font-weight" = "normal", padding = "3px 8px"), 
           textsize = "13px", 
-          direction = "auto"
+          direction = "auto",
+        options = leafletOptions(pane = "polygons")
         )
-      ) %>%
-      addLegend( pal=mypalette, values=~HappinessScore, opacity=0.8, title = "Happiness Index", position = "bottomleft" )
+      )%>%
+    addLegend( pal=mypalette, values=~HappinessScore, opacity=0.8, title = "Happiness Index", position = "bottomleft" )
     
   })
   
