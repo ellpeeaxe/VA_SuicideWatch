@@ -517,7 +517,7 @@ server <- function(input, output, session) {
   
   #Coupled Events - Linking Stacked Bar Chart and Scatterplot with Choropleth Map. 
   observe({
-    event_data <- event_data('plotly_hover', source = 'scatter')
+    event_data <- event_data('plotly_click', source = 'scatter')
     
     if(!is.null(event_data)){
       row_data <- scatterplot_data()[event_data$curveNumber+1,]
@@ -529,7 +529,7 @@ server <- function(input, output, session) {
   })
   
   observe({
-    event_data <- event_data('plotly_hover', source = 'stacked')
+    event_data <- event_data('plotly_click', source = 'stacked')
   
     if(!is.null(event_data)){
       country_data <- world_spdf@data %>%
