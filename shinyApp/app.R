@@ -435,10 +435,9 @@ server <- function(input, output, session) {
     # Storing datatable's headers as list
     headers <- (colnames(stackedBC_data))
     
-    # Function (Testing for user's input)
+    # Don't need to change position of HappinessScore
     col <- input$stackedBC_sortby
     
-    # Don't need to change position of HappinessScore
     if(col != "HappinessScore"){
       temp <- headers[3] #replacing this index 
       indexOfCol <- grep(col, headers)
