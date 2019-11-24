@@ -1,22 +1,8 @@
-#
-# This is a Shiny web application. You can run the application by clicking
-# the 'Run App' button above.
-#
-# Find out more about building applications with Shiny here:
-#==
-#    http://shiny.rstudio.com/
-#
-
-# packages = c('tidyverse', 'ggridges','readxl','dplyr',
-#              'plotly','shiny','shiny.semantic','semantic.dashboard','ggplot2',
-#              'DT', 'scales', 'rgdal', 'leaflet', 'RColorBrewer','png','base64enc', 'bsplus')
-
-# for (p in packages){
-  # if(!require(p, character.only = T)){
-  #   install.packages(p)
-  # }
-#   library(p,character.only = T)
-# }
+###########################################################################################
+#                                                                                         #
+#                                 IMPORTING LIBRARIES                                     #
+#                                                                                         #
+###########################################################################################
 
 library(tidyverse)
 library(ggridges)
@@ -26,14 +12,18 @@ library(shiny)
 library(shiny.semantic)
 library(semantic.dashboard)
 library(ggplot2)
-library(DT)
-library(scales)
 library(rgdal)
 library(leaflet)
 library(png)
 library(RColorBrewer)
 library(base64enc)
 library(bsplus)
+
+###########################################################################################
+#                                                                                         #
+#                          IMPORTING DATA AND PRE-PROCESSING                              #
+#                                                                                         #
+###########################################################################################
 
 data1 <- read_excel("data/Happiness Index.xlsx", sheet = 1)
 data2 <- read_excel("data/Happiness Index.xlsx", sheet = 2)
@@ -51,6 +41,11 @@ data1 <- merge(
     summarise(average_happiness = mean(`Life Ladder`)), 
   data1, by="Year")
 
+###########################################################################################
+#                                                                                         #
+#                                    USER-INTERFACE CODES                                 #
+#                                                                                         #
+###########################################################################################
 # Define UI for application
 ui <- dashboardPage(
   dashboardHeader(title = "Happiness Watch", inverted = TRUE),
@@ -134,6 +129,11 @@ Ridge Plot  - Shows the countries' distribution of each component over the years
       ),
       tabItem(
         tabName = "overview",
+        
+        #******************************************************************************************              
+        #*                                      OVERVIEW TAB                                      *
+        #****************************************************************************************** 
+        
         fluidRow(
           column(width = 9,
                  box(
@@ -197,9 +197,7 @@ Ridge Plot  - Shows the countries' distribution of each component over the years
                        fluidRow(
                          plotlyOutput("scatterplot")
                        )
-                     )
-                     
-                     
+                     ) 
                  )
           ),
           column(width = 7,
@@ -222,6 +220,10 @@ Ridge Plot  - Shows the countries' distribution of each component over the years
           )
         )
       ),
+      
+      #******************************************************************************************              
+      #*                                      COMPARISON TAB                                    *
+      #****************************************************************************************** 
       tabItem(
         tabName = "comparison",
         fluidRow(
@@ -286,6 +288,10 @@ Ridge Plot  - Shows the countries' distribution of each component over the years
           )
         )
       ),
+      
+      #******************************************************************************************              
+      #*                                      COUNTRY TAB                                       *
+      #****************************************************************************************** 
       tabItem(
         tabName = "country",
         fluidRow(
@@ -311,10 +317,19 @@ Ridge Plot  - Shows the countries' distribution of each component over the years
   ), theme = "cosmo"
 )
 
-
+###########################################################################################
+#                                                                                         #
+#                                       SERVER CODES                                      #
+#                                                                                         #
+###########################################################################################
 # Define server logic 
 server <- function(input, output, session) {
+
+  #******************************************************************************************              
+  #*                  OVERVIEW TAB - CHOROPLETH AND RIDGE PLOT DATA PROCESSING              *
+  #****************************************************************************************** 
   
+  #Data Processing
   RidgePlot_and_Chloro <- data2 %>% 
     rename("GDP"="Explained by: GDP per capita",
            "SocialSupport"="Explained by: Social support",
@@ -343,6 +358,10 @@ server <- function(input, output, session) {
   new.shape.data <- new.shape.data[order(new.shape.data$id,decreasing = FALSE),]
   world_spdf@data <- new.shape.data
   
+  #******************************************************************************************              
+  #*                           OVERVIEW TAB - PLOTTING RIDGE PLOT                           *
+  #****************************************************************************************** 
+  
   output$ridgeplot <- renderPlot({
     ggplot(RidgePlot_and_Chloro, aes(y=1,x=PercentValue,fill=PercentFactor)) +
       geom_density_ridges(alpha=0.5) +
@@ -352,8 +371,54 @@ server <- function(input, output, session) {
       theme(axis.text=element_text(size=10), axis.title.y = element_blank(), legend.position = "bottom")
   })
   
-  #World Stacked Bar Chart
+  #******************************************************************************************              
+  #*                          OVERVIEW TAB - PLOTTING CHOROPLETH                            *
+  #****************************************************************************************** 
+
+  # Create a color palette with handmade bins.
+  mybins <- c(0,3,4,5,6,7,8)
+  mypalette <- colorBin(palette="PuBuGn", domain=world_spdf@data$HappinessScore, na.color="lightgrey", bins=mybins)
   
+  # Prepare the text for tooltips:
+  mytext <- paste(
+    "Country: ", world_spdf@data$Country,"<br/>", 
+    "Happiness Index: ", round(world_spdf@data$HappinessScore, 2), 
+    sep="") %>%
+    lapply(htmltools::HTML)
+  
+  # Final Map
+  output$choroplethplot <- renderLeaflet({
+    leaflet(world_spdf) %>% 
+      addMapPane(name = "maplabels", zIndex = 420) %>% 
+      addMapPane(name = "polygons", zIndex = 410) %>% 
+      addTiles() %>%
+      addProviderTiles("CartoDB.PositronOnlyLabels", 
+                       options = leafletOptions(pane = "maplabels")) %>%
+      setView( lat=10, lng=0 , zoom = 0.5) %>%
+      addPolygons( 
+        fillColor = ~mypalette(HappinessScore), 
+        stroke=TRUE, 
+        fillOpacity = 0.9, 
+        color="grey", 
+        weight=0.3,
+        label = mytext,
+        labelOptions = labelOptions( 
+          style = list("font-weight" = "normal", padding = "3px 8px"), 
+          textsize = "13px", 
+          direction = "auto",
+          options = leafletOptions(pane = "polygons")
+        )
+      )%>%
+      addLegend( pal=mypalette, values=~HappinessScore, opacity=0.8, title = "Happiness Index", position = "bottomleft" )
+    
+  })
+  
+  
+  #******************************************************************************************              
+  #*             OVERVIEW TAB - STACKED BAR CHART DATA PROCESSING AND PLOTTING              *
+  #******************************************************************************************  
+  
+  #****************  DATA PROCESSING  **************** 
   stackedBC_data <- data2 %>% 
     rename("GDP"="Explained by: GDP per capita",
            "SocialSupport"="Explained by: Social support",
@@ -388,8 +453,8 @@ server <- function(input, output, session) {
     sorted_data <- stackedBC_data[order(stackedBC_data[[input$stackedBC_sortby]]),] 
   })
   
+  #****************  PLOTTING  **************** 
   output$barchart <- renderPlotly({
-    #Plotting Stacked bar chart
     p <- plot_ly(sorted_data(), type='bar', source='stacked', height = 670, width=600)
 
     for(col in headers()) {
@@ -445,47 +510,11 @@ server <- function(input, output, session) {
     )
   })
   
-  #new choropleth
-  # Create a color palette with handmade bins.
-  mybins <- c(0,3,4,5,6,7,8)
-  mypalette <- colorBin(palette="PuBuGn", domain=world_spdf@data$HappinessScore, na.color="lightgrey", bins=mybins)
+  #******************************************************************************************              
+  #*                 OVERVIEW TAB - SCATTERPLOT DATA PROCESSING AND PLOTTING                *
+  #****************************************************************************************** 
   
-  # Prepare the text for tooltips:
-  mytext <- paste(
-    "Country: ", world_spdf@data$Country,"<br/>", 
-    "Happiness Index: ", round(world_spdf@data$HappinessScore, 2), 
-    sep="") %>%
-    lapply(htmltools::HTML)
-  
-  # Final Map
-  output$choroplethplot <- renderLeaflet({
-    leaflet(world_spdf) %>% 
-      addMapPane(name = "maplabels", zIndex = 420) %>% 
-      addMapPane(name = "polygons", zIndex = 410) %>% 
-      addTiles() %>%
-      addProviderTiles("CartoDB.PositronOnlyLabels", 
-                       options = leafletOptions(pane = "maplabels")) %>%
-      setView( lat=10, lng=0 , zoom = 0.5) %>%
-      addPolygons( 
-        fillColor = ~mypalette(HappinessScore), 
-        stroke=TRUE, 
-        fillOpacity = 0.9, 
-        color="grey", 
-        weight=0.3,
-        label = mytext,
-        labelOptions = labelOptions( 
-          style = list("font-weight" = "normal", padding = "3px 8px"), 
-          textsize = "13px", 
-          direction = "auto",
-        options = leafletOptions(pane = "polygons")
-        )
-      )%>%
-    addLegend( pal=mypalette, values=~HappinessScore, opacity=0.8, title = "Happiness Index", position = "bottomleft" )
-    
-  })
-  
-  
-  # Scatter Plot Chart 
+  #****************  DATA PROCESSING  ****************   
   scatterplot_data <- reactive({
     dataset1 <- data1 %>%
       select("Country name", Year, "Life Ladder") %>%
@@ -507,6 +536,8 @@ server <- function(input, output, session) {
     
   })
   
+  
+  #****************  PLOTTING  ****************  
   geo <- list(
     showframe = FALSE,
     showcoastlines = FALSE,
@@ -518,7 +549,11 @@ server <- function(input, output, session) {
             type = 'scatter', mode = 'markers', text = ~paste("Country :", country, "<br>Change: ", change, "%"),
             source = 'scatter', color= ~change, colors = c('#F96997','#2EB49E'))%>%
       layout(xaxis = list(title = input$end_year), yaxis = list(title = input$start_year), showlegend = FALSE,geo = geo, paper_bgcolor='transparent') 
-  })
+  })   
+  
+  #******************************************************************************************              
+  #*        OVERVIEW TAB - COUPLED EVENTS BETWEEN PLOTLY CHARTS AND CHOROPLETH MAP          *
+  #******************************************************************************************
   
   #Coupled Events - Linking Stacked Bar Chart and Scatterplot with Choropleth Map. 
   observe({
@@ -535,7 +570,7 @@ server <- function(input, output, session) {
   
   observe({
     event_data <- event_data('plotly_click', source = 'stacked')
-  
+    
     if(!is.null(event_data)){
       country_data <- world_spdf@data %>%
         filter(Country == event_data$y)
@@ -544,66 +579,9 @@ server <- function(input, output, session) {
     }
   })
   
-  # MinMax Scaler
-  MMScaler <- function(x){(x-min(x,na.rm = TRUE)) / (max(x,na.rm = TRUE)-min(x,na.rm = TRUE))}
-  
-  # Comparison Tab Data
-  comparison_data <- data1 %>% 
-    rename("Country" = "Country name",
-           "HappinessIndex" = "Life Ladder",
-           "GDP" = "Log GDP per capita",
-           "SocialSupport" = "Social support",
-           "LifeExpectancy" = "Healthy life expectancy at birth",
-           "Freedom" = "Freedom to make life choices",
-           "Corruption" = "Perceptions of corruption") %>%
-    mutate(MinMaxGDP = MMScaler(GDP),
-           MinMaxSS = MMScaler(SocialSupport),
-           MinMaxLE = MMScaler(LifeExpectancy),
-           MinMaxFreedom = MMScaler(Freedom),
-           MinMaxCorruption = 1 - MMScaler(Corruption),
-           MinMaxGenerosity = MMScaler(Generosity)) 
-  
-  comparison_data_2 <- comparison_data %>%
-    mutate(`GDP` = MinMaxGDP,
-           `Social Support` = MinMaxSS,
-           `Life Expectancy` = MinMaxLE,
-           `Freedom` = MinMaxFreedom,
-           `Corruption` = MinMaxCorruption,
-           `Generosity` = MinMaxGenerosity) 
-  
-  # Comparison Tab - Combined Bar
-  combined_data <- reactive({
-    combined_data <- comparison_data_2 %>% 
-      select(Country, Year, `GDP`, `Social Support`, `Life Expectancy`, `Freedom`, `Corruption`, `Generosity`) %>% 
-      filter((Country == input$first_country | Country == input$second_country) & Year == input$comparison_year) %>% 
-      gather(Category, Value, `GDP`, `Social Support`, `Life Expectancy`, `Freedom`, `Corruption`, `Generosity`)
-  })
-  
-  output$country_barchart <- renderPlotly({
-    plot_ly(combined_data(), x = ~Category, y = ~Value, 
-            color = ~Country, type = "bar", position = "dodge") %>% 
-      config(displayModeBar = FALSE)%>% 
-      layout(xaxis=list(fixedrange=TRUE)) %>% 
-      layout(yaxis=list(fixedrange=TRUE))
-  })
-  
-  
-  # Comparison Tab - Country A Radar
-  countryA_data <- reactive({
-    countryA_data <- comparison_data_2 %>% 
-      select(Country, Year, `HappinessIndex`,`GDP`, `Social Support`, `Life Expectancy`, `Freedom`, `Corruption`, `Generosity`) %>% 
-      filter(Country == input$first_country & Year == input$comparison_year) %>% 
-      gather(Category, Value, `GDP`, `Social Support`, `Life Expectancy`, `Freedom`, `Corruption`, `Generosity`)
-  })
-  
-  
-  # Comparison Tab - Country B Radar
-  countryB_data <- reactive({
-    countryB_data <- comparison_data_2 %>% 
-      select(Country, Year, `HappinessIndex`,`GDP`, `Social Support`, `Life Expectancy`, `Freedom`, `Corruption`, `Generosity`) %>% 
-      filter(Country == input$second_country & Year == input$comparison_year) %>% 
-      gather(Category, Value,`GDP`, `Social Support`, `Life Expectancy`, `Freedom`, `Corruption`, `Generosity`)
-  })
+  #******************************************************************************************              
+  #*                        COMPARISON TAB - CREATING VALUE BOX                             *
+  #******************************************************************************************
   
   countryA_score <- reactive({
     countryA_score <- signif(mean(countryA_data()$HappinessIndex),3)
@@ -630,6 +608,80 @@ server <- function(input, output, session) {
       size = "small"
     )
   })
+  
+  #******************************************************************************************              
+  #*               COMPARISON TAB - GROUPED BAR DATA PROCESSING AND PLOTTING                *
+  #******************************************************************************************
+  
+  #****************  DATA PROCESSING  ****************
+  # MinMax Scaler
+  MMScaler <- function(x){(x-min(x,na.rm = TRUE)) / (max(x,na.rm = TRUE)-min(x,na.rm = TRUE))}
+  
+  # Comparison Tab Data
+  comparison_data <- data1 %>% 
+    rename("Country" = "Country name",
+           "HappinessIndex" = "Life Ladder",
+           "GDP" = "Log GDP per capita",
+           "SocialSupport" = "Social support",
+           "LifeExpectancy" = "Healthy life expectancy at birth",
+           "Freedom" = "Freedom to make life choices",
+           "Corruption" = "Perceptions of corruption") %>%
+    mutate(MinMaxGDP = MMScaler(GDP),
+           MinMaxSS = MMScaler(SocialSupport),
+           MinMaxLE = MMScaler(LifeExpectancy),
+           MinMaxFreedom = MMScaler(Freedom),
+           MinMaxCorruption = 1 - MMScaler(Corruption),
+           MinMaxGenerosity = MMScaler(Generosity)) 
+  
+  comparison_data_2 <- comparison_data %>%
+    mutate(`GDP` = MinMaxGDP,
+           `Social Support` = MinMaxSS,
+           `Life Expectancy` = MinMaxLE,
+           `Freedom` = MinMaxFreedom,
+           `Corruption` = MinMaxCorruption,
+           `Generosity` = MinMaxGenerosity)
+  
+  combined_data <- reactive({
+    combined_data <- comparison_data_2 %>% 
+      select(Country, Year, `GDP`, `Social Support`, `Life Expectancy`, `Freedom`, `Corruption`, `Generosity`) %>% 
+      filter((Country == input$first_country | Country == input$second_country) & Year == input$comparison_year) %>% 
+      gather(Category, Value, `GDP`, `Social Support`, `Life Expectancy`, `Freedom`, `Corruption`, `Generosity`)
+  })
+  
+  #****************  PLOTTING  ****************
+  output$country_barchart <- renderPlotly({
+    plot_ly(combined_data(), x = ~Category, y = ~Value, 
+            color = ~Country, type = "bar", position = "dodge") %>% 
+      config(displayModeBar = FALSE)%>% 
+      layout(xaxis=list(fixedrange=TRUE)) %>% 
+      layout(yaxis=list(fixedrange=TRUE))
+  })
+  
+  #******************************************************************************************              
+  #*                  COMPARISON TAB - RADAR DATA PROCESSING AND PLOTTING                   *
+  #******************************************************************************************
+  
+  #****************  DATA PROCESSING  ****************
+  
+  # Comparison Tab - Country A Radar
+  countryA_data <- reactive({
+    countryA_data <- comparison_data_2 %>% 
+      select(Country, Year, `HappinessIndex`,`GDP`, `Social Support`, `Life Expectancy`, `Freedom`, `Corruption`, `Generosity`) %>% 
+      filter(Country == input$first_country & Year == input$comparison_year) %>% 
+      gather(Category, Value, `GDP`, `Social Support`, `Life Expectancy`, `Freedom`, `Corruption`, `Generosity`)
+  })
+  
+  
+  # Comparison Tab - Country B Radar
+  countryB_data <- reactive({
+    countryB_data <- comparison_data_2 %>% 
+      select(Country, Year, `HappinessIndex`,`GDP`, `Social Support`, `Life Expectancy`, `Freedom`, `Corruption`, `Generosity`) %>% 
+      filter(Country == input$second_country & Year == input$comparison_year) %>% 
+      gather(Category, Value,`GDP`, `Social Support`, `Life Expectancy`, `Freedom`, `Corruption`, `Generosity`)
+  })
+  
+  
+  #****************  PLOTTING  ****************
   
   # Combined Radar
   output$country_radar <- renderPlotly({
@@ -663,6 +715,11 @@ server <- function(input, output, session) {
       layout(yaxis=list(fixedrange=TRUE))
   })
   
+  #******************************************************************************************              
+  #*                  COMPARISON TAB - RIDGE PLOT DATA PROCESSING AND PLOTTING              *
+  #******************************************************************************************
+  
+  #****************  DATA PROCESSING  ****************
   
   # Comparison Tab - Country A Ridge
   countryAridge_data <- reactive({
@@ -672,14 +729,6 @@ server <- function(input, output, session) {
       gather(key = "Category", value = "Value", `GDP`, `Social Support`, `Life Expectancy`, `Freedom`, `Corruption`, `Generosity`)
   })
   
-  output$countryAridge <- renderPlot({
-    ggplot(countryAridge_data(), aes(y=1,x=Value,fill=Category)) +
-      geom_density_ridges(alpha=0.5) +
-      scale_y_discrete(expand = c(0.01, 0)) +  
-      scale_x_continuous(expand = c(0, 0))+
-      theme(axis.text=element_text(size=10,), axis.title.y = element_blank(), legend.position = "bottom") +
-      labs(title = input$first_country)
-  })
   
   # Comparison Tab - Country B Ridge
   countryBridge_data <- reactive({
@@ -687,6 +736,17 @@ server <- function(input, output, session) {
       select(Country, Year, `GDP`, `Social Support`, `Life Expectancy`, `Freedom`, `Corruption`, `Generosity`) %>% 
       filter(Country == input$second_country) %>% 
       gather(key = "Category", value = "Value", `GDP`, `Social Support`, `Life Expectancy`, `Freedom`, `Corruption`, `Generosity`)
+  })
+  
+  #****************  PLOTTING  ****************
+  
+  output$countryAridge <- renderPlot({
+    ggplot(countryAridge_data(), aes(y=1,x=Value,fill=Category)) +
+      geom_density_ridges(alpha=0.5) +
+      scale_y_discrete(expand = c(0.01, 0)) +  
+      scale_x_continuous(expand = c(0, 0))+
+      theme(axis.text=element_text(size=10,), axis.title.y = element_blank(), legend.position = "bottom") +
+      labs(title = input$first_country)
   })
   
   output$countryBridge <- renderPlot({
@@ -698,8 +758,11 @@ server <- function(input, output, session) {
       labs(title = input$second_country)
   })
   
+  #******************************************************************************************              
+  #*                    COUNTRY TAB - LINE PLOTS DATA PROCESSING AND PLOTTING               *
+  #******************************************************************************************
   
-  #Country Tab
+  #****************  DATA PROCESSING  ****************
   country_data_selected <- reactive({
     data1 %>%
       rename("Country" = "Country name",
@@ -715,6 +778,9 @@ server <- function(input, output, session) {
       filter(Country == input$country_tab_selected)
   })
   
+  #****************  PLOTTING  ****************
+  
+  # Line Plot for Happines Index Score
   output$happiness_timeseries <- renderPlotly({
     plot_ly(country_data_selected(), x = ~Year, y = ~HappinessIndex, mode = 'lines+markers') %>%
       add_trace(y = ~HappinessIndex, name = paste(input$country_tab_selected,"Happiness Index Score"), mode = 'lines+markers')%>%
@@ -726,6 +792,7 @@ server <- function(input, output, session) {
       config(displayModeBar = FALSE)%>% layout(xaxis=list(fixedrange=TRUE)) %>% layout(yaxis=list(fixedrange=TRUE))
   })
   
+  # Multivariate Line Plot for Happines Index Score
   output$measures_timeseries <- renderPlotly({
     plot_ly(country_data_selected_measurements(), x = ~Year, y = ~MinMaxGDP, mode = 'lines+markers', name = "GDP") %>%
       add_trace(y = ~MinMaxGDP, name = "GDP", mode = 'lines+markers')%>%
@@ -742,6 +809,7 @@ server <- function(input, output, session) {
       layout(xaxis=list(fixedrange=TRUE)) %>% 
       layout(yaxis=list(fixedrange=TRUE))
   })
+  
   
 }
 # Run the application 
